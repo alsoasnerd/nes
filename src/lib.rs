@@ -1,6 +1,7 @@
 const LDA: u8 = 0xA9;
 const BRK: u8 = 0x00;
 const TAX: u8 = 0xAA;
+const INX: u8 = 0xE8;
 struct CPU {
     register_a: u8,
     register_x: u8,
@@ -37,6 +38,8 @@ impl CPU {
 
                 TAX => self.tax(),
 
+                INX => self.inx(),
+
                 _ => todo!(),
             }
         }
@@ -65,6 +68,15 @@ impl CPU {
     fn tax(&mut self) {
         self.register_x = self.register_a;
 
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn inx(&mut self) {
+        if self.register_x == 0xFF {
+            self.register_x = 0;
+        } else {
+            self.register_x += 1;
+        }
         self.update_zero_and_negative_flags(self.register_x);
     }
 }
@@ -106,5 +118,24 @@ mod test {
         cpu.register_a = 10;
         cpu.interpret(program);
         assert_eq!(cpu.register_x, 10);
+    }
+
+    //Tests the LDA, TAX, INX and BRK opcodes
+   #[test]
+   fn test_5_ops_working_together() {
+       let mut cpu = CPU::new();
+       cpu.interpret(vec![LDA, 0xc0, TAX, INX, BRK]);
+
+       assert_eq!(cpu.register_x, 0xc1)
+   }
+
+   //Tests if INX cannot be overflowed
+    #[test]
+    fn test_inx_overflow() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0xFF;
+        cpu.interpret(vec![INX, INX, BRK]);
+
+        assert_eq!(cpu.register_x, 1)
     }
 }
