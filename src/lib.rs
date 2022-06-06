@@ -6,7 +6,7 @@ struct CPU {
     register_a: u8,
     register_x: u8,
     status: u8,
-    pc: u8,
+    pc: u16,
 }
 
 impl CPU {
