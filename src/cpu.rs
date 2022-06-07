@@ -1,3 +1,7 @@
+use std::collections::HashMap;
+
+use crate::opcodes;
+
 pub const ROM_FIRST_BYTE: u16 = 0x8000;
 pub const ROM_FIRST_ADDRESS: u16 = 0xFFFC;
 
@@ -78,112 +82,6 @@ impl CPU {
         }
     }
 
-    pub fn load_and_run(&mut self, program: Vec<u8>) {
-        self.load(program);
-        self.reset();
-        self.run();
-    }
-
-    pub fn load(&mut self, program: Vec<u8>) {
-        let program_space = ROM_FIRST_BYTE as usize ..(ROM_FIRST_BYTE as usize + program.len());
-
-        self.memmory.array[program_space].copy_from_slice(&program[..]);
-        self.memmory.write_u16(ROM_FIRST_ADDRESS, ROM_FIRST_BYTE);
-    }
-
-    pub fn run(&mut self) {
-        loop {
-            let opcodes = self.memmory.read(self.pc);
-            self.pc += 1;
-
-            match opcodes {
-                0xA9 => {
-                    self.lda(&AddressingMode::Immediate);
-                    self.pc += 1;
-                },
-
-                0xA5 => {
-                    self.lda(&AddressingMode::ZeroPage);
-                    self.pc += 1;
-                },
-
-                0xB5 => {
-                    self.lda(&AddressingMode::ZeroPageX);
-                    self.pc += 1;
-                },
-
-                0xAD => {
-                    self.lda(&AddressingMode::Absolute);
-                    self.pc += 2;
-                },
-
-                0xBD => {
-                    self.lda(&AddressingMode::AbsoluteX);
-                    self.pc += 2;
-                }
-
-                0xB9 => {
-                    self.lda(&AddressingMode::AbsoluteY);
-                    self.pc += 2;
-                }
-
-                0xA1 => {
-                    self.lda(&AddressingMode::IndirectX);
-                    self.pc += 1;
-                }
-
-                0xB1 => {
-                    self.lda(&AddressingMode::IndirectY);
-                    self.pc += 1;
-                }
-
-                0x00 => return,
-
-                0xAA => self.tax(),
-
-                0xE8 => self.inx(),
-
-                0xEA => self.pc += 2,
-
-                0x85 => {
-                    self.sta(&AddressingMode::ZeroPage);
-                    self.pc += 1;
-                },
-
-                0x95 => {
-                    self.sta(&AddressingMode::ZeroPageX);
-                    self.pc += 1;
-                },
-
-                0x8D => {
-                    self.sta(&AddressingMode::Absolute);
-                    self.pc += 2;
-                },
-
-                0x9D => {
-                    self.sta(&AddressingMode::AbsoluteX);
-                    self.pc += 2;
-                },
-
-                0x99 => {
-                    self.sta(&AddressingMode::AbsoluteY);
-                    self.pc += 2;
-                }
-
-                0x81 => {
-                    self.sta(&AddressingMode::IndirectX);
-                    self.pc += 1;
-                }
-
-                0x91 => {
-                    self.sta(&AddressingMode::IndirectY);
-                    self.pc += 1;
-                }
-                _ => todo!(),
-            }
-        }
-    }
-
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
         match mode {
             AddressingMode::Immediate => self.pc, // Get the address into register, not the value.
@@ -238,6 +136,49 @@ impl CPU {
                 panic!("mode {:?} is not supported", mode);
             }
 
+        }
+    }
+
+    pub fn load_and_run(&mut self, program: Vec<u8>) {
+        self.load(program);
+        self.reset();
+        self.run();
+    }
+
+    pub fn load(&mut self, program: Vec<u8>) {
+        let program_space = ROM_FIRST_BYTE as usize ..(ROM_FIRST_BYTE as usize + program.len());
+
+        self.memmory.array[program_space].copy_from_slice(&program[..]);
+        self.memmory.write_u16(ROM_FIRST_ADDRESS, ROM_FIRST_BYTE);
+    }
+
+    pub fn run(&mut self) {
+        let ref opcodes: HashMap<u8, &'static opcodes::OpCode> = *opcodes::OPCODES_HASHMAP;
+        loop {
+            let code = self.memmory.read(self.pc);
+            self.pc += 1;
+            let pc_state = self.pc;
+
+            let opcode = opcodes.get(&code).expect(&format!("OpCode {:x} is not recognized", code));
+
+            match code {
+                0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
+                    self.lda(&opcode.mode);
+                }
+
+                0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
+                    self.sta(&opcode.mode);
+                }
+
+                0xAA => self.tax(),
+                0xE8 => self.inx(),
+                0x00 => return,
+                _ => todo!(),
+            }
+
+            if pc_state == self.pc {
+                self.pc += (opcode.len - 1) as u16
+            }
         }
     }
 
