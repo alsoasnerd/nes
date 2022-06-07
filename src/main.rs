@@ -1,3 +1,1 @@
-fn main() {
-    nes::run();
-}
+fn main() {}
