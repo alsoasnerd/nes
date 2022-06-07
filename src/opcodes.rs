@@ -47,7 +47,7 @@ lazy_static! {
     pub static ref OPCODES_HASHMAP: HashMap<u8, &'static OpCode> = {
         let mut hashmap = HashMap::new();
 
-        for nes_opcode in &*NES_OPCODES {
+        for nes_opcode in &(*NES_OPCODES) {
             hashmap.insert(nes_opcode.code, nes_opcode);
         }
         hashmap
