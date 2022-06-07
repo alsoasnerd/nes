@@ -145,6 +145,40 @@ impl CPU {
 
                 0xEA => self.pc += 2,
 
+                0x85 => {
+                    self.sta(&AddressingMode::ZeroPage);
+                    self.pc += 1;
+                },
+
+                0x95 => {
+                    self.sta(&AddressingMode::ZeroPageX);
+                    self.pc += 1;
+                },
+
+                0x8D => {
+                    self.sta(&AddressingMode::Absolute);
+                    self.pc += 2;
+                },
+
+                0x9D => {
+                    self.sta(&AddressingMode::AbsoluteX);
+                    self.pc += 2;
+                },
+
+                0x99 => {
+                    self.sta(&AddressingMode::AbsoluteY);
+                    self.pc += 2;
+                }
+
+                0x81 => {
+                    self.sta(&AddressingMode::IndirectX);
+                    self.pc += 1;
+                }
+
+                0x91 => {
+                    self.sta(&AddressingMode::IndirectY);
+                    self.pc += 1;
+                }
                 _ => todo!(),
             }
         }
@@ -213,6 +247,11 @@ impl CPU {
 
         self.register_a = value;
         self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    fn sta(&mut self, mode: &AddressingMode){
+        let address = self.get_operand_address(mode);
+        self.memmory.write(address, self.register_a);
     }
 
     fn tax(&mut self) {
@@ -303,5 +342,13 @@ mod test {
         cpu.load_and_run(vec![0xa5, 0x10, 0x00]);
 
         assert_eq!(cpu.register_a, 0x55);
+    }
+
+    #[test]
+    fn test_sta_0x85_and_lda() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa5, 0xc0, 0x85, 0x00]);
+
+        assert_eq!(cpu.memmory.array[0x8001], 0xc0);
     }
 }
