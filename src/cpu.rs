@@ -172,6 +172,10 @@ impl CPU {
                     self.sta(&opcode.mode);
                 }
 
+                0x69 | 0x65 | 0x75 | 0x6d | 0x7d | 0x79 | 0x61 | 0x71 => {
+                    self.adc(&opcode.mode);
+                }
+
                 0xAA => self.tax(),
                 0xE8 => self.inx(),
                 0x00 => return,
@@ -207,6 +211,15 @@ impl CPU {
         self.register_x = self.register_x.wrapping_add(1);
 
         self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn adc(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        let result = self.register_a.wrapping_add(value).wrapping_add(self.status & 0b1000_0000);
+
+        self.register_a = result;
     }
 
     fn update_zero_and_negative_flags(&mut self, result: u8) {
@@ -293,5 +306,21 @@ mod test {
         cpu.load_and_run(vec![0xa5, 0xc0, 0x85, 0x00]);
 
         assert_eq!(cpu.memmory.array[0x8001], 0xc0);
+    }
+
+    #[test]
+    fn test_adc_without_carry() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x01, 0x69, 0x02]);
+
+        assert_eq!(cpu.register_a, 0x03);
+    }
+
+    #[test]
+    fn test_adc_with_carry() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x50, 0x69, 0x90]);
+
+        assert_eq!(cpu.register_a, 0xe0);
     }
 }
