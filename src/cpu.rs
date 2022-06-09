@@ -176,6 +176,10 @@ impl CPU {
                     self.adc(&opcode.mode);
                 }
 
+                0xE9 | 0xE5 | 0xF5 | 0xED | 0xFD | 0xF9 | 0xE1 | 0xF1 => {
+                    self.sbc(&opcode.mode);
+                }
+
                 0xAA => self.tax(),
                 0xE8 => self.inx(),
                 0x00 => return,
@@ -218,6 +222,15 @@ impl CPU {
         let value = self.memmory.read(address);
 
         let result = self.register_a.wrapping_add(value).wrapping_add(self.status & 0b1000_0000);
+
+        self.register_a = result;
+    }
+
+    fn sbc(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        let result = self.register_a.wrapping_sub(value).wrapping_sub(self.status & 0b1000_0000);
 
         self.register_a = result;
     }
@@ -322,5 +335,21 @@ mod test {
         cpu.load_and_run(vec![0xa9, 0x50, 0x69, 0x90]);
 
         assert_eq!(cpu.register_a, 0xe0);
+    }
+
+    #[test]
+    fn test_sbc_without_carry() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x01, 0xE9, 0x02]);
+
+        assert_eq!(cpu.register_a, 0xFF);
+    }
+
+    #[test]
+    fn test_sbc_with_carry() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x50, 0xE9, 0xf0]);
+
+        assert_eq!(cpu.register_a, 0x60);
     }
 }
