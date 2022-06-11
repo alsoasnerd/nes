@@ -199,6 +199,14 @@ impl CPU {
                     self.lda(&opcode.mode);
                 }
 
+                0x90 | 0xB0 | 0xF0 => {
+                    self.bcc(&opcode.mode);
+                }
+
+                0x24 | 0x2C => {
+                    self.bit(&opcode.mode);
+                }
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -248,6 +256,24 @@ impl CPU {
 
         let result = value.wrapping_add(value << 1);
         self.memmory.write(address, result);
+    }
+
+    fn bcc(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        if self.status & 0b1000_0000 == 0 {
+            self.pc = value as u16;
+        }
+    }
+
+    fn bit(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        self.status &= 0b0111_1111;
+        self.status |= value & 0b1000_0000;
+        self.status |= value & 0b0100_0000;
     }
 
     fn lda(&mut self, mode: &AddressingMode) {

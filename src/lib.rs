@@ -103,4 +103,20 @@ mod test {
         assert_eq!(cpu.status, 0x10);
         assert_eq!(cpu.register_a, 0x10);
     }
+
+    #[test]
+    fn test_0x90_bcc_branch_if_carry_clear() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x10, 0x90, 0x00]);
+
+        assert_eq!(cpu.pc, 0x01);
+    }
+
+    #[test]
+    fn test_bit_test_zero_flag() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x00, 0x29, 0x00]);
+
+        assert!(cpu.status & 0b0000_0010 == 0b10);
+    }
 }
