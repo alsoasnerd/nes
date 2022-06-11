@@ -199,8 +199,8 @@ impl CPU {
                     self.lda(&opcode.mode);
                 }
 
-                0x90 | 0xB0 | 0xF0 => {
-                    self.bcc(&opcode.mode);
+                0x90 | 0xB0 | 0xF0 | 0x30 | 0xd0 | 0x10 => {
+                    self.branch(&opcode.mode);
                 }
 
                 0x24 | 0x2C => {
@@ -258,13 +258,11 @@ impl CPU {
         self.memmory.write(address, result);
     }
 
-    fn bcc(&mut self, mode: &AddressingMode) {
+    fn branch(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        if self.status & 0b1000_0000 == 0 {
-            self.register_pc = value as u16;
-        }
+        self.register_pc = value as u16;
     }
 
     fn bit(&mut self, mode: &AddressingMode) {
