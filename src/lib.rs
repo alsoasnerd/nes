@@ -109,7 +109,7 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x10, 0x90, 0x00]);
 
-        assert_eq!(cpu.pc, 0x01);
+        assert_eq!(cpu.register_pc, 0x01);
     }
 
     #[test]

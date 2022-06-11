@@ -65,7 +65,7 @@ pub struct CPU {
     pub register_x: u8,
     pub register_y: u8,
     pub status: u8,
-    pub pc: u16,
+    pub register_pc: u16,
     pub memmory: Memmory,
     pub stack: Vec<u8>,
 }
@@ -83,7 +83,7 @@ impl CPU {
             register_x: 0,
             register_y: 0,
             status: 0,
-            pc: 0,
+            register_pc: 0,
             memmory: Memmory::new(),
             stack: Vec::new(),
         }
@@ -92,49 +92,49 @@ impl CPU {
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
         match mode {
             AddressingMode::Accumulator => self.register_a as u16,
-            AddressingMode::Immediate => self.pc, // Get the address into register, not the value.
-            AddressingMode::ZeroPage => self.memmory.read(self.pc) as u16, // Get any value less then 256 bytes.
-            AddressingMode::Absolute => self.memmory.read_u16(self.pc),    // Loads any value.
+            AddressingMode::Immediate => self.register_pc, // Get the address into register, not the value.
+            AddressingMode::ZeroPage => self.memmory.read(self.register_pc) as u16, // Get any value less then 256 bytes.
+            AddressingMode::Absolute => self.memmory.read_u16(self.register_pc),    // Loads any value.
 
             // Gets any value less then 256 bytes and add value of X register.
             AddressingMode::ZeroPageX => {
-                let position = self.memmory.read(self.pc);
+                let position = self.memmory.read(self.register_pc);
                 position.wrapping_add(self.register_x) as u16
             }
 
             // Gets any value less then 256 bytes and add value of Y register.
             AddressingMode::ZeroPageY => {
-                let position = self.memmory.read(self.pc);
+                let position = self.memmory.read(self.register_pc);
                 position.wrapping_add(self.register_y) as u16
             }
 
             // Gets any address and add in PC.
             AddressingMode::Relative => {
-                let position = self.memmory.read(self.pc);
-                self.pc.wrapping_add(position as u16)
+                let position = self.memmory.read(self.register_pc);
+                self.register_pc.wrapping_add(position as u16)
             }
 
             // Gets any value and add value of X register.
             AddressingMode::AbsoluteX => {
-                let base = self.memmory.read_u16(self.pc);
+                let base = self.memmory.read_u16(self.register_pc);
                 base.wrapping_add(self.register_x as u16)
             }
 
             // Gets any value and add value of Y register.
             AddressingMode::AbsoluteY => {
-                let base = self.memmory.read_u16(self.pc);
+                let base = self.memmory.read_u16(self.register_pc);
                 base.wrapping_add(self.register_y as u16)
             }
 
             // Gets any value of any address.
             AddressingMode::Indirect => {
-                let base = self.memmory.read_u16(self.pc);
+                let base = self.memmory.read_u16(self.register_pc);
                 self.memmory.read_u16(base)
             }
 
             // Add value of X register in a zero page address, gets the value in this address, and ordenate him using Little Endian
             AddressingMode::IndirectX => {
-                let base = self.memmory.read(self.pc);
+                let base = self.memmory.read(self.register_pc);
                 let pointer = base.wrapping_add(self.register_x);
                 let low = self.memmory.read(pointer as u16);
                 let high = self.memmory.read(pointer.wrapping_add(1) as u16);
@@ -144,7 +144,7 @@ impl CPU {
 
             // Dereference an zero page address using Little Endian and add the Y register in result.
             AddressingMode::IndirectY => {
-                let base = self.memmory.read(self.pc);
+                let base = self.memmory.read(self.register_pc);
                 let low = self.memmory.read(base as u16);
                 let high = self.memmory.read(base.wrapping_add(1) as u16);
                 let deref_base = u16::from_le_bytes([high, low]);
@@ -174,9 +174,9 @@ impl CPU {
     pub fn run(&mut self) {
         let opcodes: &HashMap<u8, &'static opcodes::OpCode> = &(*opcodes::OPCODES_HASHMAP);
         loop {
-            let code = self.memmory.read(self.pc);
-            self.pc += 1;
-            let pc_state = self.pc;
+            let code = self.memmory.read(self.register_pc);
+            self.register_pc += 1;
+            let pc_state = self.register_pc;
 
             let opcode = opcodes.get(&code).unwrap_or_else(|| {
                 panic!("OpCode {:x} is not recognized", code);
@@ -225,8 +225,8 @@ impl CPU {
                 _ => todo!(),
             }
 
-            if pc_state == self.pc {
-                self.pc += (opcode.len - 1) as u16
+            if pc_state == self.register_pc {
+                self.register_pc += (opcode.len - 1) as u16
             }
         }
     }
@@ -263,7 +263,7 @@ impl CPU {
         let value = self.memmory.read(address);
 
         if self.status & 0b1000_0000 == 0 {
-            self.pc = value as u16;
+            self.register_pc = value as u16;
         }
     }
 
@@ -353,6 +353,6 @@ impl CPU {
         self.register_y = 0;
         self.status = 0;
 
-        self.pc = self.memmory.read_u16(ROM_FIRST_ADDRESS);
+        self.register_pc = self.memmory.read_u16(ROM_FIRST_ADDRESS);
     }
 }
