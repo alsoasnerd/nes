@@ -25,7 +25,6 @@ impl OpCode {
 lazy_static! {
     pub static ref NES_OPCODES: Vec<OpCode> = vec![
         OpCode::new(0xAA, "TAX", 1, 2, AddressingMode::NoneAddressing),
-        OpCode::new(0xE8, "INX", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0x08, "PHP", 1, 3, AddressingMode::NoneAddressing),
         OpCode::new(0x28, "PLP", 1, 4, AddressingMode::NoneAddressing),
         OpCode::new(0x48, "PHA", 1, 3, AddressingMode::NoneAddressing),
@@ -117,6 +116,15 @@ lazy_static! {
         OpCode::new(0x59, "EOR", 3, 4, AddressingMode::AbsoluteY),
         OpCode::new(0x41, "EOR", 2, 6, AddressingMode::IndirectX),
         OpCode::new(0x51, "EOR", 2, 5, AddressingMode::IndirectY),
+        OpCode::new(0xE6, "INC", 2, 5, AddressingMode::ZeroPage),
+        OpCode::new(0xF6, "INC", 2, 6, AddressingMode::ZeroPageX),
+        OpCode::new(0xEE, "INC", 3, 6, AddressingMode::Absolute),
+        OpCode::new(0xFE, "INC", 3, 7, AddressingMode::AbsoluteX),
+        OpCode::new(0xE8, "INX", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0xC8, "INY", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0x4C, "JMP", 3, 3, AddressingMode::Absolute),
+        OpCode::new(0x6C, "JMP", 5, 5, AddressingMode::Indirect),
+        OpCode::new(0x20, "JSR", 3, 6, AddressingMode::Absolute),
     ];
 
     pub static ref OPCODES_HASHMAP: HashMap<u8, &'static OpCode> = {
