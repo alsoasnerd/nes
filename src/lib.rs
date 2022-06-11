@@ -113,10 +113,50 @@ mod test {
     }
 
     #[test]
+    fn test_bcs_branch_if_carry_set() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x10, 0x90, 0x01]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_beq_branch_if_equal() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x10, 0x90, 0x02]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
     fn test_bit_test_zero_flag() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x00, 0x29, 0x00]);
 
         assert!(cpu.status & 0b0000_0010 == 0b10);
+    }
+
+    #[test]
+    fn test_bmi_branch_if_minus_flag_set() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x00, 0x30, 0x00]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_bne_branch_if_not_equal() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x10, 0xD0, 0x02]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_bpl_branch_if_plus_flag_clear() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x00, 0x10, 0x00]);
+
+        assert_eq!(cpu.register_pc, 0x01);
     }
 }
