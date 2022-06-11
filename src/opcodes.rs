@@ -24,7 +24,6 @@ impl OpCode {
 
 lazy_static! {
     pub static ref NES_OPCODES: Vec<OpCode> = vec![
-        OpCode::new(0x00, "BRK", 1, 7, AddressingMode::NoneAddressing),
         OpCode::new(0xAA, "TAX", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0xE8, "INX", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0x08, "PHP", 1, 3, AddressingMode::NoneAddressing),
@@ -75,6 +74,15 @@ lazy_static! {
         OpCode::new(0x16, "ASL", 2, 6, AddressingMode::ZeroPageX),
         OpCode::new(0x0E, "ASL", 3, 6, AddressingMode::Absolute),
         OpCode::new(0x1E, "ASL", 3, 7, AddressingMode::AbsoluteX),
+        OpCode::new(0x90, "BCC", 2, 2, AddressingMode::Relative),
+        OpCode::new(0xB0, "BCS", 2, 2, AddressingMode::Relative),
+        OpCode::new(0xF0, "BEQ", 2, 2, AddressingMode::Relative),
+        OpCode::new(0x24, "BIT", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0x2C, "BIT", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0x30, "BMI", 2, 2, AddressingMode::Relative),
+        OpCode::new(0xD0, "BNE", 2, 2, AddressingMode::Relative),
+        OpCode::new(0x10, "BPL", 2, 2, AddressingMode::Relative),
+        OpCode::new(0x00, "BRK", 1, 7, AddressingMode::NoneAddressing),
     ];
 
     pub static ref OPCODES_HASHMAP: HashMap<u8, &'static OpCode> = {
