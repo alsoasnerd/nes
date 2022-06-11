@@ -83,6 +83,20 @@ lazy_static! {
         OpCode::new(0xD0, "BNE", 2, 2, AddressingMode::Relative),
         OpCode::new(0x10, "BPL", 2, 2, AddressingMode::Relative),
         OpCode::new(0x00, "BRK", 1, 7, AddressingMode::NoneAddressing),
+        OpCode::new(0x50, "BVC", 2, 2, AddressingMode::Relative),
+        OpCode::new(0x70, "BVS", 2, 2, AddressingMode::Relative),
+        OpCode::new(0x18, "CLC", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0xD8, "CLD", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0x58, "CLI", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0xB8, "CLV", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0xC9, "CMP", 2, 2, AddressingMode::Immediate),
+        OpCode::new(0xC5, "CMP", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0xD5, "CMP", 2, 4, AddressingMode::ZeroPageX),
+        OpCode::new(0xCD, "CMP", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0xDD, "CMP", 3, 4, AddressingMode::AbsoluteX),
+        OpCode::new(0xD9, "CMP", 3, 4, AddressingMode::AbsoluteY),
+        OpCode::new(0xC1, "CMP", 2, 6, AddressingMode::IndirectX),
+        OpCode::new(0xD1, "CMP", 2, 5, AddressingMode::IndirectY),
     ];
 
     pub static ref OPCODES_HASHMAP: HashMap<u8, &'static OpCode> = {
