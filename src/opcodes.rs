@@ -70,6 +70,11 @@ lazy_static! {
         OpCode::new(0x39, "AND", 3, 4, AddressingMode::AbsoluteY),
         OpCode::new(0x21, "AND", 2, 6, AddressingMode::IndirectX),
         OpCode::new(0x31, "AND", 2, 5, AddressingMode::IndirectY),
+        OpCode::new(0x0A, "ASL", 1, 2, AddressingMode::Accumulator),
+        OpCode::new(0x06, "ASL", 2, 5, AddressingMode::ZeroPage),
+        OpCode::new(0x16, "ASL", 2, 6, AddressingMode::ZeroPageX),
+        OpCode::new(0x0E, "ASL", 3, 6, AddressingMode::Absolute),
+        OpCode::new(0x1E, "ASL", 3, 7, AddressingMode::AbsoluteX),
     ];
 
     pub static ref OPCODES_HASHMAP: HashMap<u8, &'static OpCode> = {
