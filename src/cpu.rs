@@ -61,7 +61,8 @@ pub struct CPU {
     pub register_y: u8,
     pub status: u8,
     pub pc: u16,
-    memmory: Memmory
+    memmory: Memmory,
+    stack: Vec<u8>,
 }
 
 impl Default for CPU {
@@ -78,7 +79,8 @@ impl CPU {
             register_y: 0,
             status: 0,
             pc: 0,
-            memmory: Memmory::new()
+            memmory: Memmory::new(),
+            stack: Vec::new(),
         }
     }
 
@@ -182,6 +184,10 @@ impl CPU {
 
                 0xAA => self.tax(),
                 0xE8 => self.inx(),
+                0x48 => self.pha(),
+                0x08 => self.php(),
+                0x68 => self.pla(),
+                0x28 => self.plp(),
                 0x00 => return,
                 _ => todo!(),
             }
@@ -233,6 +239,26 @@ impl CPU {
         let result = self.register_a.wrapping_sub(value).wrapping_sub(self.status & 0b1000_0000);
 
         self.register_a = result;
+    }
+
+    fn pha(&mut self) {
+        self.stack.push(self.register_a);
+    }
+
+    fn php(&mut self) {
+        self.stack.push(self.status);
+    }
+
+    fn pla(&mut self) {
+        let value = self.stack.pop().unwrap();
+        self.register_a = value;
+
+        self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    fn plp(&mut self) {
+        let value = self.stack.pop().unwrap();
+        self.status = value;
     }
 
     fn update_zero_and_negative_flags(&mut self, result: u8) {
@@ -351,5 +377,14 @@ mod test {
         cpu.load_and_run(vec![0xa9, 0x50, 0xE9, 0xf0]);
 
         assert_eq!(cpu.register_a, 0x60);
+    }
+
+    #[test]
+    fn test_pha_plp_php_pla() {
+        let mut cpu = CPU::new();
+
+        cpu.load_and_run(vec![0xa9, 0x10, 0x48, 0x28, 0xa9, 0x05, 0x08, 0x68]);
+        assert_eq!(cpu.status, 0x10);
+        assert_eq!(cpu.register_a, 0x10);
     }
 }
