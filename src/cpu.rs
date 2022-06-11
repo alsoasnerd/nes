@@ -7,13 +7,16 @@ pub const ROM_FIRST_ADDRESS: u16 = 0xFFFC;
 
 #[derive(Debug)]
 pub enum AddressingMode {
+    Accumulator,
     Immediate,
     ZeroPage,
     ZeroPageX,
     ZeroPageY,
+    Relative,
     Absolute,
     AbsoluteX,
     AbsoluteY,
+    Indirect,
     IndirectX,
     IndirectY,
     NoneAddressing,
@@ -86,6 +89,7 @@ impl CPU {
 
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
         match mode {
+            AddressingMode::Accumulator => self.register_a as u16,
             AddressingMode::Immediate => self.pc, // Get the address into register, not the value.
             AddressingMode::ZeroPage => self.memmory.read(self.pc) as u16, // Get any value less then 256 bytes.
             AddressingMode::Absolute => self.memmory.read_u16(self.pc), // Loads any value.
@@ -102,6 +106,12 @@ impl CPU {
                 position.wrapping_add(self.register_y) as u16
             },
 
+            // Gets any address and add in PC.
+            AddressingMode::Relative => {
+                let position = self.memmory.read(self.pc);
+                self.pc.wrapping_add(position as u16)
+            }
+
             // Gets any value and add value of X register.
             AddressingMode::AbsoluteX => {
                 let base = self.memmory.read_u16(self.pc);
@@ -113,6 +123,12 @@ impl CPU {
                 let base = self.memmory.read_u16(self.pc);
                 base.wrapping_add(self.register_y as u16)
             },
+
+            // Gets any value of any address.
+            AddressingMode::Indirect => {
+                let base = self.memmory.read_u16(self.pc);
+                self.memmory.read_u16(base)
+            }
 
             // Add value of X register in a zero page address, gets the value in this address, and ordenate him using Little Endian
             AddressingMode::IndirectX => {
