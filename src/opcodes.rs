@@ -1,6 +1,6 @@
 use crate::cpu::AddressingMode;
-use std::collections::HashMap;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
 
 pub struct OpCode {
     pub code: u8,
@@ -184,7 +184,6 @@ lazy_static! {
         OpCode::new(0x9A, "TXS", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0x98, "TYA", 1, 2, AddressingMode::NoneAddressing),
     ];
-
     pub static ref OPCODES_HASHMAP: HashMap<u8, &'static OpCode> = {
         let mut hashmap = HashMap::new();
 

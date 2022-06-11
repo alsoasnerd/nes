@@ -24,14 +24,16 @@ pub enum AddressingMode {
 
 #[derive(Debug)]
 pub struct Memmory {
-    pub array: [u8; 0xFFFF]
+    pub array: [u8; 0xFFFF],
 }
-
+impl Default for Memmory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl Memmory {
     pub fn new() -> Self {
-        Memmory {
-            array: [0; 0xFFFF]
-        }
+        Memmory { array: [0; 0xFFFF] }
     }
     pub fn read(&self, address: u16) -> u8 {
         self.array[address as usize]
@@ -92,19 +94,19 @@ impl CPU {
             AddressingMode::Accumulator => self.register_a as u16,
             AddressingMode::Immediate => self.pc, // Get the address into register, not the value.
             AddressingMode::ZeroPage => self.memmory.read(self.pc) as u16, // Get any value less then 256 bytes.
-            AddressingMode::Absolute => self.memmory.read_u16(self.pc), // Loads any value.
+            AddressingMode::Absolute => self.memmory.read_u16(self.pc),    // Loads any value.
 
             // Gets any value less then 256 bytes and add value of X register.
             AddressingMode::ZeroPageX => {
                 let position = self.memmory.read(self.pc);
                 position.wrapping_add(self.register_x) as u16
-            },
+            }
 
             // Gets any value less then 256 bytes and add value of Y register.
             AddressingMode::ZeroPageY => {
                 let position = self.memmory.read(self.pc);
                 position.wrapping_add(self.register_y) as u16
-            },
+            }
 
             // Gets any address and add in PC.
             AddressingMode::Relative => {
@@ -116,13 +118,13 @@ impl CPU {
             AddressingMode::AbsoluteX => {
                 let base = self.memmory.read_u16(self.pc);
                 base.wrapping_add(self.register_x as u16)
-            },
+            }
 
             // Gets any value and add value of Y register.
             AddressingMode::AbsoluteY => {
                 let base = self.memmory.read_u16(self.pc);
                 base.wrapping_add(self.register_y as u16)
-            },
+            }
 
             // Gets any value of any address.
             AddressingMode::Indirect => {
@@ -138,7 +140,7 @@ impl CPU {
                 let high = self.memmory.read(pointer.wrapping_add(1) as u16);
 
                 u16::from_le_bytes([high, low])
-            },
+            }
 
             // Dereference an zero page address using Little Endian and add the Y register in result.
             AddressingMode::IndirectY => {
@@ -148,12 +150,11 @@ impl CPU {
                 let deref_base = u16::from_le_bytes([high, low]);
 
                 deref_base.wrapping_add(self.register_y as u16)
-            },
+            }
 
             AddressingMode::NoneAddressing => {
                 panic!("mode {:?} is not supported", mode);
             }
-
         }
     }
 
@@ -164,7 +165,7 @@ impl CPU {
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
-        let program_space = ROM_FIRST_BYTE as usize ..(ROM_FIRST_BYTE as usize + program.len());
+        let program_space = ROM_FIRST_BYTE as usize..(ROM_FIRST_BYTE as usize + program.len());
 
         self.memmory.array[program_space].copy_from_slice(&program[..]);
         self.memmory.write_u16(ROM_FIRST_ADDRESS, ROM_FIRST_BYTE);
@@ -202,7 +203,6 @@ impl CPU {
                     self.sta(&opcode.mode);
                 }
 
-
                 0xE9 | 0xE5 | 0xF5 | 0xED | 0xFD | 0xF9 | 0xE1 | 0xF1 => {
                     self.sbc(&opcode.mode);
                 }
@@ -227,7 +227,10 @@ impl CPU {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        let result = self.register_a.wrapping_add(value).wrapping_add(self.status & 0b1000_0000);
+        let result = self
+            .register_a
+            .wrapping_add(value)
+            .wrapping_add(self.status & 0b1000_0000);
 
         self.register_a = result;
     }
@@ -255,7 +258,7 @@ impl CPU {
         self.update_zero_and_negative_flags(self.register_a);
     }
 
-    fn sta(&mut self, mode: &AddressingMode){
+    fn sta(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         self.memmory.write(address, self.register_a);
     }
@@ -272,12 +275,14 @@ impl CPU {
         self.update_zero_and_negative_flags(self.register_x);
     }
 
-
     fn sbc(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        let result = self.register_a.wrapping_sub(value).wrapping_sub(self.status & 0b1000_0000);
+        let result = self
+            .register_a
+            .wrapping_sub(value)
+            .wrapping_sub(self.status & 0b1000_0000);
 
         self.register_a = result;
     }
