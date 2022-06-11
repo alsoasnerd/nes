@@ -24,14 +24,6 @@ impl OpCode {
 
 lazy_static! {
     pub static ref NES_OPCODES: Vec<OpCode> = vec![
-        OpCode::new(0xAA, "TAX", 1, 2, AddressingMode::NoneAddressing),
-        OpCode::new(0x85, "STA", 2, 3, AddressingMode::ZeroPage),
-        OpCode::new(0x95, "STA", 2, 4, AddressingMode::ZeroPageX),
-        OpCode::new(0x8D, "STA", 3, 4, AddressingMode::Absolute),
-        OpCode::new(0x9D, "STA", 3, 5, AddressingMode::AbsoluteX),
-        OpCode::new(0x99, "STA", 3, 5, AddressingMode::AbsoluteY),
-        OpCode::new(0x81, "STA", 2, 6, AddressingMode::IndirectX),
-        OpCode::new(0x91, "STA", 2, 6, AddressingMode::IndirectY),
         OpCode::new(0x69, "ADC", 2, 2, AddressingMode::Immediate),
         OpCode::new(0x65, "ADC", 2, 3, AddressingMode::ZeroPage),
         OpCode::new(0x75, "ADC", 2, 4, AddressingMode::ZeroPageX),
@@ -172,6 +164,25 @@ lazy_static! {
         OpCode::new(0x38, "SEC", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0xF8, "SED", 1, 2, AddressingMode::NoneAddressing),
         OpCode::new(0x78, "SEI", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0x85, "STA", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0x95, "STA", 2, 4, AddressingMode::ZeroPageX),
+        OpCode::new(0x8D, "STA", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0x9D, "STA", 3, 5, AddressingMode::AbsoluteX),
+        OpCode::new(0x99, "STA", 3, 5, AddressingMode::AbsoluteY),
+        OpCode::new(0x81, "STA", 2, 6, AddressingMode::IndirectX),
+        OpCode::new(0x91, "STA", 2, 6, AddressingMode::IndirectY),
+        OpCode::new(0x86, "STX", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0x96, "STX", 2, 4, AddressingMode::ZeroPageY),
+        OpCode::new(0x8E, "STX", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0x84, "STY", 2, 3, AddressingMode::ZeroPage),
+        OpCode::new(0x94, "STY", 2, 4, AddressingMode::ZeroPageX),
+        OpCode::new(0x8C, "STY", 3, 4, AddressingMode::Absolute),
+        OpCode::new(0xAA, "TAX", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0xA8, "TAY", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0xBA, "TSX", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0x8A, "TXA", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0x9A, "TXS", 1, 2, AddressingMode::NoneAddressing),
+        OpCode::new(0x98, "TYA", 1, 2, AddressingMode::NoneAddressing),
     ];
 
     pub static ref OPCODES_HASHMAP: HashMap<u8, &'static OpCode> = {
