@@ -182,6 +182,18 @@ impl CPU {
             });
 
             match code {
+                0x69 | 0x65 | 0x75 | 0x6d | 0x7d | 0x79 | 0x61 | 0x71 => {
+                    self.adc(&opcode.mode);
+                }
+
+                0x29 | 0x25 | 0x35 | 0x2d | 0x3d | 0x39 | 0x21 | 0x31 => {
+                    self.and(&opcode.mode);
+                }
+
+                0x0a | 0x1a => {
+                    self.asl(&opcode.mode);
+                }
+
                 0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
                     self.lda(&opcode.mode);
                 }
@@ -190,9 +202,6 @@ impl CPU {
                     self.sta(&opcode.mode);
                 }
 
-                0x69 | 0x65 | 0x75 | 0x6d | 0x7d | 0x79 | 0x61 | 0x71 => {
-                    self.adc(&opcode.mode);
-                }
 
                 0xE9 | 0xE5 | 0xF5 | 0xED | 0xFD | 0xF9 | 0xE1 | 0xF1 => {
                     self.sbc(&opcode.mode);
@@ -212,6 +221,30 @@ impl CPU {
                 self.pc += (opcode.len - 1) as u16
             }
         }
+    }
+
+    fn adc(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        let result = self.register_a.wrapping_add(value).wrapping_add(self.status & 0b1000_0000);
+
+        self.register_a = result;
+    }
+
+    fn and(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        self.register_a &= value;
+    }
+
+    fn asl(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        let result = value.wrapping_add(value << 1);
+        self.memmory.write(address, result);
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
@@ -239,14 +272,6 @@ impl CPU {
         self.update_zero_and_negative_flags(self.register_x);
     }
 
-    fn adc(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memmory.read(address);
-
-        let result = self.register_a.wrapping_add(value).wrapping_add(self.status & 0b1000_0000);
-
-        self.register_a = result;
-    }
 
     fn sbc(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
