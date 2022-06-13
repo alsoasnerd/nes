@@ -215,6 +215,18 @@ impl CPU {
 
                 0xB8 => self.clv(),
 
+                0xC9 | 0xC5 | 0xD5 | 0xCD | 0xDD | 0xD9 | 0xC1 | 0xD1 => {
+                    self.cmp(&opcode.mode);
+                }
+
+                0xE0 | 0xE4 | 0xEC => {
+                    self.cpx(&opcode.mode);
+                }
+
+                0xC0 | 0xC4 | 0xCC => {
+                    self.cpy(&opcode.mode);
+                }
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -296,6 +308,39 @@ impl CPU {
 
     fn clv(&mut self) {
         self.status &= 0b1110_1111;
+    }
+
+    fn cmp(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+        let result = self.register_a.wrapping_sub(value);
+
+        self.status &= 0b0111_1111;
+        self.status |= if result > 0 { 0b1000_0000 } else { 0 };
+
+        self.update_zero_and_negative_flags(result);
+    }
+
+    fn cpx(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+        let result = self.register_x.wrapping_sub(value);
+
+        self.status &= 0b0111_1111;
+        self.status |= if result > 0 { 0b1000_0000 } else { 0 };
+
+        self.update_zero_and_negative_flags(result);
+    }
+
+    fn cpy(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+        let result = self.register_y.wrapping_sub(value);
+
+        self.status &= 0b0111_1111;
+        self.status |= if result > 0 { 0b1000_0000 } else { 0 };
+
+        self.update_zero_and_negative_flags(result);
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
