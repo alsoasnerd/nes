@@ -1,5 +1,6 @@
 pub mod cpu;
 pub mod opcodes;
+pub mod memmory;
 
 #[cfg(test)]
 mod test {
