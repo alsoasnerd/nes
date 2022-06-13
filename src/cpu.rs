@@ -64,10 +64,10 @@ pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
     pub register_y: u8,
-    pub status: u8,
+    pub register_sr: u8,
     pub register_pc: u16,
-    pub memmory: Memmory,
     pub stack: Vec<u8>,
+    pub memmory: Memmory,
 }
 
 impl Default for CPU {
@@ -79,11 +79,11 @@ impl Default for CPU {
 impl CPU {
     pub fn new() -> Self {
         CPU {
-            register_a: 0,
-            register_x: 0,
-            register_y: 0,
-            status: 0,
-            register_pc: 0,
+            register_a: 0x00,
+            register_x: 0x00,
+            register_y: 0x00,
+            register_sr: 0b0000_0000,
+            register_pc: 0x00,
             memmory: Memmory::new(),
             stack: Vec::new(),
         }
@@ -258,7 +258,7 @@ impl CPU {
         let result = self
             .register_a
             .wrapping_add(value)
-            .wrapping_add(self.status & 0b1000_0000);
+            .wrapping_add(self.register_sr & 0b1000_0000);
 
         self.register_a = result;
     }
@@ -289,25 +289,24 @@ impl CPU {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        self.status &= 0b0111_1111;
-        self.status |= value & 0b1000_0000;
-        self.status |= value & 0b0100_0000;
+        self.register_sr |= value & 0b1000_0000;
+        self.register_sr |= value & 0b0100_0000;
     }
 
     fn clc(&mut self) {
-        self.status &= 0b0111_1111;
+        self.register_sr &= 0b0111_1111;
     }
 
     fn cld(&mut self) {
-        self.status &= 0b1011_1111;
+        self.register_sr &= 0b1011_1111;
     }
 
     fn cli(&mut self) {
-        self.status &= 0b1101_1111;
+        self.register_sr &= 0b1101_1111;
     }
 
     fn clv(&mut self) {
-        self.status &= 0b1110_1111;
+        self.register_sr &= 0b1110_1111;
     }
 
     fn cmp(&mut self, mode: &AddressingMode) {
@@ -315,8 +314,8 @@ impl CPU {
         let value = self.memmory.read(address);
         let result = self.register_a.wrapping_sub(value);
 
-        self.status &= 0b0111_1111;
-        self.status |= if result > 0 { 0b1000_0000 } else { 0 };
+        self.register_sr &= 0b0111_1111;
+        self.register_sr |= if result > 0 { 0b1000_0000 } else { 0 };
 
         self.update_zero_and_negative_flags(result);
     }
@@ -326,8 +325,8 @@ impl CPU {
         let value = self.memmory.read(address);
         let result = self.register_x.wrapping_sub(value);
 
-        self.status &= 0b0111_1111;
-        self.status |= if result > 0 { 0b1000_0000 } else { 0 };
+        self.register_sr &= 0b0111_1111;
+        self.register_sr |= if result > 0 { 0b1000_0000 } else { 0 };
 
         self.update_zero_and_negative_flags(result);
     }
@@ -337,8 +336,8 @@ impl CPU {
         let value = self.memmory.read(address);
         let result = self.register_y.wrapping_sub(value);
 
-        self.status &= 0b0111_1111;
-        self.status |= if result > 0 { 0b1000_0000 } else { 0 };
+        self.register_sr &= 0b0111_1111;
+        self.register_sr |= if result > 0 { 0b1000_0000 } else { 0 };
 
         self.update_zero_and_negative_flags(result);
     }
@@ -375,7 +374,7 @@ impl CPU {
         let result = self
             .register_a
             .wrapping_sub(value)
-            .wrapping_sub(self.status & 0b1000_0000);
+            .wrapping_sub(self.register_sr & 0b1000_0000);
 
         self.register_a = result;
     }
@@ -385,7 +384,7 @@ impl CPU {
     }
 
     fn php(&mut self) {
-        self.stack.push(self.status);
+        self.stack.push(self.register_sr);
     }
 
     fn pla(&mut self) {
@@ -397,28 +396,29 @@ impl CPU {
 
     fn plp(&mut self) {
         let value = self.stack.pop().unwrap();
-        self.status = value;
+        self.register_sr = value;
     }
 
     fn update_zero_and_negative_flags(&mut self, result: u8) {
         if result == 0 {
-            self.status |= 0b0000_0010;
+            self.register_sr |= 0b0000_0010;
         } else {
-            self.status &= 0b1111_1101;
+            self.register_sr &= 0b1111_1101;
         }
 
         if result & 0b1000_0000 != 0 {
-            self.status |= 0b1000_0000;
+            self.register_sr |= 0b1000_0000;
         } else {
-            self.status &= 0b0111_1111;
+            self.register_sr &= 0b0111_1111;
         }
     }
 
     pub fn reset(&mut self) {
-        self.register_a = 0;
-        self.register_x = 0;
-        self.register_y = 0;
-        self.status = 0;
+        self.register_a = 0x00;
+        self.register_x = 0x00;
+        self.register_y = 0x00;
+        self.register_sr = 0b0000_0000;
+        self.register_pc = 0x00;
 
         self.register_pc = self.memmory.read_u16(ROM_FIRST_ADDRESS);
     }
