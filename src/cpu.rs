@@ -199,13 +199,21 @@ impl CPU {
                     self.lda(&opcode.mode);
                 }
 
-                0x90 | 0xB0 | 0xF0 | 0x30 | 0xd0 | 0x10 => {
+                0x90 | 0xB0 | 0xF0 | 0x30 | 0xd0 | 0x10 | 0x50 | 0x70 => {
                     self.branch(&opcode.mode);
                 }
 
                 0x24 | 0x2C => {
                     self.bit(&opcode.mode);
                 }
+
+                0x18 => self.clc(),
+
+                0xD8 => self.cld(),
+
+                0x58 => self.cli(),
+
+                0xB8 => self.clv(),
 
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
@@ -272,6 +280,22 @@ impl CPU {
         self.status &= 0b0111_1111;
         self.status |= value & 0b1000_0000;
         self.status |= value & 0b0100_0000;
+    }
+
+    fn clc(&mut self) {
+        self.status &= 0b0111_1111;
+    }
+
+    fn cld(&mut self) {
+        self.status &= 0b1011_1111;
+    }
+
+    fn cli(&mut self) {
+        self.status &= 0b1101_1111;
+    }
+
+    fn clv(&mut self) {
+        self.status &= 0b1110_1111;
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
