@@ -399,7 +399,7 @@ impl CPU {
     fn jsr(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         self.stack.push(address as u8);
-        self.register_pc = address.wrapping_sub(1);
+        self.register_pc = if address == 0 { 0xFFFD } else { address - 1 };
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
