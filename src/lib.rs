@@ -210,4 +210,12 @@ mod test {
 
         assert_eq!(cpu.register_y, 0xFE);
     }
+
+    #[test]
+    fn test_eor_0x41_eor_accumulator_with_memory() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa2, 0x05, 0x41, 0x05]);
+
+        assert_eq!(cpu.register_a, 0x00);
+    }
 }
