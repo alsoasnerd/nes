@@ -217,6 +217,10 @@ impl CPU {
 
                 0xC8 => self.iny(),
 
+                0x4C => self.jmp(&opcode.mode),
+
+                0x20 => self.jsr(&opcode.mode),
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -385,6 +389,17 @@ impl CPU {
 
         self.update_zero_flag(self.register_y);
         self.update_negative_flag(self.register_y);
+    }
+
+    fn jmp(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        self.register_pc = address;
+    }
+
+    fn jsr(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        self.stack.push(address as u8);
+        self.register_pc = address.wrapping_sub(1);
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
