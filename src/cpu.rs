@@ -197,6 +197,10 @@ impl CPU {
                     self.cmp(self.register_y, &opcode.mode);
                 }
 
+                0xC6 | 0xCE | 0xD6 | 0xDE => {
+                    self.dec(&opcode.mode);
+                }
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -302,6 +306,16 @@ impl CPU {
         } else {
             self.register_sr &= 0b1111_1110;
         }
+
+        self.update_zero_and_negative_flags(result);
+    }
+
+    fn dec(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        let result = value.wrapping_sub(1);
+        self.memmory.write(address, result);
 
         self.update_zero_and_negative_flags(result);
     }
