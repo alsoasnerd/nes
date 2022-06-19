@@ -205,6 +205,10 @@ impl CPU {
 
                 0x88 => self.dey(),
 
+                0x49 | 0x45 | 0x55 | 0x4D | 0x5D | 0x59 | 0x41 | 0x51 => {
+                    self.eor(&opcode.mode);
+                }
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -340,6 +344,15 @@ impl CPU {
         self.register_y = self.register_y.wrapping_sub(1);
         self.update_zero_flag(self.register_y);
         self.update_negative_flag(self.register_y);
+    }
+
+    fn eor(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        self.register_a ^= value;
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
