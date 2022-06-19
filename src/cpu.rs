@@ -209,6 +209,14 @@ impl CPU {
                     self.eor(&opcode.mode);
                 }
 
+                0xE6 | 0xEE | 0xF6 | 0xFE => {
+                    self.inc(&opcode.mode);
+                }
+
+                0xE8 => self.inx(),
+
+                0xC8 => self.iny(),
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -218,7 +226,6 @@ impl CPU {
                 }
 
                 0xAA => self.tax(),
-                0xE8 => self.inx(),
                 0x48 => self.pha(),
                 0x08 => self.php(),
                 0x68 => self.pla(),
@@ -355,6 +362,31 @@ impl CPU {
         self.update_negative_flag(self.register_a);
     }
 
+    fn inc(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        let result = value.wrapping_add(1);
+        self.memmory.write(address, result);
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+    }
+
+    fn inx(&mut self) {
+        self.register_x = self.register_x.wrapping_add(1);
+
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
+    }
+
+    fn iny(&mut self) {
+        self.register_y = self.register_y.wrapping_add(1);
+
+        self.update_zero_flag(self.register_y);
+        self.update_negative_flag(self.register_y);
+    }
+
     fn lda(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
@@ -389,13 +421,6 @@ impl CPU {
 
     fn tax(&mut self) {
         self.register_x = self.register_a;
-
-        self.update_zero_flag(self.register_x);
-        self.update_negative_flag(self.register_x);
-    }
-
-    fn inx(&mut self) {
-        self.register_x = self.register_x.wrapping_add(1);
 
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
