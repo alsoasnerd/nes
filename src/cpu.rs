@@ -217,12 +217,15 @@ impl CPU {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        let result = self
-            .register_a
-            .wrapping_add(value)
-            .wrapping_add(self.register_sr & 0b1000_0000);
+        if self.register_a + value > 0xFF {
+            self.register_sr |= 0b0000_0001;
+            self.register_a += value + 1;
+        } else {
+            self.register_sr &= 0b1111_1110;
+            self.register_a += value;
+        }
 
-        self.register_a = result;
+        self.update_zero_and_negative_flags(self.register_a);
     }
 
     fn and(&mut self, mode: &AddressingMode) {
@@ -230,14 +233,17 @@ impl CPU {
         let value = self.memmory.read(address);
 
         self.register_a &= value;
+        self.update_zero_and_negative_flags(self.register_a);
     }
 
     fn asl(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        let result = value.wrapping_add(value << 1);
-        self.memmory.write(address, result);
+        self.register_a = value * 2;
+        self.memmory.write(address, self.register_a);
+
+        self.update_zero_and_negative_flags(self.register_a);
     }
 
     fn branch(&mut self, mode: &AddressingMode) {
@@ -251,33 +257,41 @@ impl CPU {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        self.register_sr |= value & 0b1000_0000;
-        self.register_sr |= value & 0b0100_0000;
+        self.update_zero_and_negative_flags(self.register_a & value);
+
+        if value > 0xFF {
+            self.register_sr |= 0b0100_0000;
+        } else {
+            self.register_sr &= 0b1011_1111;
+        }
     }
 
     fn clc(&mut self) {
-        self.register_sr &= 0b0111_1111;
+        self.register_sr &= 0b1111_1110;
     }
 
     fn cld(&mut self) {
-        self.register_sr &= 0b1011_1111;
+        self.register_sr &= 0b1111_0111;
     }
 
     fn cli(&mut self) {
-        self.register_sr &= 0b1101_1111;
+        self.register_sr &= 0b1111_1011;
     }
 
     fn clv(&mut self) {
-        self.register_sr &= 0b1110_1111;
+        self.register_sr &= 0b1011_1111;
     }
 
     fn cmp(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
-        let result = self.register_a.wrapping_sub(value);
+        let result = self.register_a - value;
 
-        self.register_sr &= 0b0111_1111;
-        self.register_sr |= if result > 0 { 0b1000_0000 } else { 0 };
+        if self.register_a >= value {
+            self.register_sr |= 0b0000_0001;
+        } else {
+            self.register_sr &= 0b1111_1110;
+        }
 
         self.update_zero_and_negative_flags(result);
     }
@@ -285,10 +299,13 @@ impl CPU {
     fn cpx(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
-        let result = self.register_x.wrapping_sub(value);
+        let result = self.register_x - value;
 
-        self.register_sr &= 0b0111_1111;
-        self.register_sr |= if result > 0 { 0b1000_0000 } else { 0 };
+        if self.register_x >= value {
+            self.register_sr |= 0b0000_0001;
+        } else {
+            self.register_sr &= 0b1111_1110;
+        }
 
         self.update_zero_and_negative_flags(result);
     }
@@ -296,10 +313,13 @@ impl CPU {
     fn cpy(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
-        let result = self.register_y.wrapping_sub(value);
+        let result = self.register_y - value;
 
-        self.register_sr &= 0b0111_1111;
-        self.register_sr |= if result > 0 { 0b1000_0000 } else { 0 };
+        if self.register_y >= value {
+            self.register_sr |= 0b0000_0001;
+        } else {
+            self.register_sr &= 0b1111_1110;
+        }
 
         self.update_zero_and_negative_flags(result);
     }
