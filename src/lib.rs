@@ -194,4 +194,20 @@ mod test {
 
         assert_eq!(cpu.memmory.array[0x00], 0xFE);
     }
+
+    #[test]
+    fn test_dex_decrement_x() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xca, 0xca]);
+
+        assert_eq!(cpu.register_x, 0xFE);
+    }
+
+    #[test]
+    fn test_dey_decrement_y() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0x88, 0x88]);
+
+        assert_eq!(cpu.register_y, 0xFE);
+    }
 }
