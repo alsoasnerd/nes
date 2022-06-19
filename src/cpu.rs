@@ -234,14 +234,15 @@ impl CPU {
         let value = self.memmory.read(address);
 
         if self.register_a > self.register_a.wrapping_add(value) {
-            self.register_sr |= 0b0000_0001;
+            self.set_carry_flag(true);
         } else {
-            self.register_sr &= 0b1111_1110;
+            self.set_carry_flag(false);
         }
 
         self.register_a = self.register_a.wrapping_add(value);
 
-        self.update_zero_and_negative_flags(self.register_a);
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn and(&mut self, mode: &AddressingMode) {
@@ -249,7 +250,8 @@ impl CPU {
         let value = self.memmory.read(address);
 
         self.register_a &= value;
-        self.update_zero_and_negative_flags(self.register_a);
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn asl(&mut self, mode: &AddressingMode) {
@@ -259,7 +261,8 @@ impl CPU {
         self.register_a = value * 2;
         self.memmory.write(address, self.register_a);
 
-        self.update_zero_and_negative_flags(self.register_a);
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn branch(&mut self, mode: &AddressingMode) {
@@ -273,31 +276,32 @@ impl CPU {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        self.update_zero_and_negative_flags(self.register_a & value);
+        self.update_zero_flag(self.register_a & value);
+        self.update_negative_flag(value);
 
         let overflow_flag = (value >> 6) & 1;
 
         if overflow_flag == 1 {
-            self.register_sr |= 0b0100_0000;
+            self.set_overflow_flag(true);
         } else {
-            self.register_sr &= 0b1011_1111;
+            self.set_overflow_flag(false);
         }
     }
 
     fn clc(&mut self) {
-        self.register_sr &= 0b1111_1110;
+        self.set_carry_flag(false);
     }
 
     fn cld(&mut self) {
-        self.register_sr &= 0b1111_0111;
+        self.set_decimal_flag(false);
     }
 
     fn cli(&mut self) {
-        self.register_sr &= 0b1111_1011;
+        self.set_interrupt_disable_flag(false);
     }
 
     fn clv(&mut self) {
-        self.register_sr &= 0b1011_1111;
+        self.set_overflow_flag(false);
     }
 
     fn cmp(&mut self, register: u8, mode: &AddressingMode) {
@@ -306,12 +310,13 @@ impl CPU {
         let result = register.wrapping_sub(value);
 
         if register >= value {
-            self.register_sr |= 0b0000_0001;
+            self.set_carry_flag(true);
         } else {
-            self.register_sr &= 0b1111_1110;
+            self.set_carry_flag(false);
         }
 
-        self.update_zero_and_negative_flags(result);
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
     }
 
     fn dec(&mut self, mode: &AddressingMode) {
@@ -321,17 +326,20 @@ impl CPU {
         let result = value.wrapping_sub(1);
         self.memmory.write(address, result);
 
-        self.update_zero_and_negative_flags(result);
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
     }
 
     fn dex(&mut self) {
         self.register_x = self.register_x.wrapping_sub(1);
-        self.update_zero_and_negative_flags(self.register_x);
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
     }
 
     fn dey(&mut self) {
         self.register_y = self.register_y.wrapping_sub(1);
-        self.update_zero_and_negative_flags(self.register_y);
+        self.update_zero_flag(self.register_y);
+        self.update_negative_flag(self.register_y);
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
@@ -339,7 +347,8 @@ impl CPU {
         let value = self.memmory.read(address);
 
         self.register_a = value;
-        self.update_zero_and_negative_flags(self.register_a);
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn ldx(&mut self, mode: &AddressingMode) {
@@ -347,7 +356,8 @@ impl CPU {
         let value = self.memmory.read(address);
 
         self.register_x = value;
-        self.update_zero_and_negative_flags(self.register_x);
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
     }
 
     fn ldy(&mut self, mode: &AddressingMode) {
@@ -355,7 +365,8 @@ impl CPU {
         let value = self.memmory.read(address);
 
         self.register_y = value;
-        self.update_zero_and_negative_flags(self.register_y);
+        self.update_zero_flag(self.register_y);
+        self.update_negative_flag(self.register_y);
     }
 
     fn sta(&mut self, mode: &AddressingMode) {
@@ -366,13 +377,15 @@ impl CPU {
     fn tax(&mut self) {
         self.register_x = self.register_a;
 
-        self.update_zero_and_negative_flags(self.register_x);
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
     }
 
     fn inx(&mut self) {
         self.register_x = self.register_x.wrapping_add(1);
 
-        self.update_zero_and_negative_flags(self.register_x);
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
     }
 
     fn sbc(&mut self, mode: &AddressingMode) {
@@ -380,14 +393,15 @@ impl CPU {
         let value = self.memmory.read(address);
 
         if self.register_a < self.register_a.wrapping_sub(value) {
-            self.register_sr &= 0b1111_1110;
+            self.set_carry_flag(false);
         } else {
-            self.register_sr |= 0b0000_0001;
+            self.set_carry_flag(true);
         }
 
         self.register_a = self.register_a.wrapping_sub(value);
 
-        self.update_zero_and_negative_flags(self.register_a);
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn pha(&mut self) {
@@ -402,7 +416,8 @@ impl CPU {
         let value = self.stack.pop().unwrap();
         self.register_a = value;
 
-        self.update_zero_and_negative_flags(self.register_a);
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn plp(&mut self) {
@@ -410,17 +425,51 @@ impl CPU {
         self.register_sr = value;
     }
 
-    fn update_zero_and_negative_flags(&mut self, result: u8) {
+    fn update_zero_flag(&mut self, result: u8) {
         if result == 0 {
             self.register_sr |= 0b0000_0010;
         } else {
             self.register_sr &= 0b1111_1101;
         }
+    }
 
+    fn update_negative_flag(&mut self, result: u8) {
         if result & 0b1000_0000 != 0 {
             self.register_sr |= 0b1000_0000;
         } else {
             self.register_sr &= 0b0111_1111;
+        }
+    }
+
+    fn set_carry_flag(&mut self, status: bool) {
+        if status {
+            self.register_sr |= 0b0000_0001;
+        } else {
+            self.register_sr &= 0b1111_1110;
+        }
+    }
+
+    fn set_decimal_flag(&mut self, status: bool) {
+        if status {
+            self.register_sr |= 0b0001_0000;
+        } else {
+            self.register_sr &= 0b1110_1111;
+        }
+    }
+
+    fn set_interrupt_disable_flag(&mut self, status: bool) {
+        if status {
+            self.register_sr |= 0b0000_1000;
+        } else {
+            self.register_sr &= 0b1111_0111;
+        }
+    }
+
+    fn set_overflow_flag(&mut self, status: bool) {
+        if status {
+            self.register_sr |= 0b0100_0000;
+        } else {
+            self.register_sr &= 0b1011_1111;
         }
     }
 
