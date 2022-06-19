@@ -201,6 +201,10 @@ impl CPU {
                     self.dec(&opcode.mode);
                 }
 
+                0xCA => self.dex(),
+
+                0x88 => self.dey(),
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -318,6 +322,16 @@ impl CPU {
         self.memmory.write(address, result);
 
         self.update_zero_and_negative_flags(result);
+    }
+
+    fn dex(&mut self) {
+        self.register_x = self.register_x.wrapping_sub(1);
+        self.update_zero_and_negative_flags(self.register_x);
+    }
+
+    fn dey(&mut self) {
+        self.register_y = self.register_y.wrapping_sub(1);
+        self.update_zero_and_negative_flags(self.register_y);
     }
 
     fn lda(&mut self, mode: &AddressingMode) {
