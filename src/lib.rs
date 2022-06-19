@@ -65,19 +65,21 @@ mod test {
     }
 
     #[test]
-    fn test_adc_without_carry() {
+    fn test_0x69_adc_without_carry() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x01, 0x69, 0x02]);
 
         assert_eq!(cpu.register_a, 0x03);
+        assert_eq!(cpu.register_sr & 0b0000_0001, 0b0);
     }
 
     #[test]
-    fn test_adc_with_carry() {
+    fn test_0x69_adc_with_carry() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x50, 0x69, 0x90]);
+        cpu.load_and_run(vec![0xa9, 0xFF, 0x69, 0x01]);
 
-        assert_eq!(cpu.register_a, 0xe0);
+        assert_eq!(cpu.register_a, 0x00);
+        assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
     }
 
     #[test]

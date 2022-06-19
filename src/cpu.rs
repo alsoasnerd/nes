@@ -217,7 +217,13 @@ impl CPU {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        self.register_a = self.register_a + value + 0b0000_0001;
+        if self.register_a > self.register_a.wrapping_add(value) {
+            self.register_sr |= 0b0000_0001;
+        } else {
+            self.register_sr &= 0b1111_1110;
+        }
+
+        self.register_a = self.register_a.wrapping_add(value);
 
         self.update_zero_and_negative_flags(self.register_a);
     }
