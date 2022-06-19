@@ -186,4 +186,12 @@ mod test {
 
         assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
     }
+
+    #[test]
+    fn test_dec_0xc6_decrement_memory() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa2, 0x00, 0xC6, 0x00, 0xC6, 0x00]);
+
+        assert_eq!(cpu.memmory.array[0x00], 0xFE);
+    }
 }
