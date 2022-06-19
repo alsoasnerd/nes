@@ -351,12 +351,15 @@ impl CPU {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        let result = self
-            .register_a
-            .wrapping_sub(value)
-            .wrapping_sub(self.register_sr & 0b1000_0000);
+        if self.register_a < self.register_a.wrapping_sub(value) {
+            self.register_sr &= 0b1111_1110;
+        } else {
+            self.register_sr |= 0b0000_0001;
+        }
 
-        self.register_a = result;
+        self.register_a = self.register_a.wrapping_sub(value);
+
+        self.update_zero_and_negative_flags(self.register_a);
     }
 
     fn pha(&mut self) {
