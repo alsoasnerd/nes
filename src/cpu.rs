@@ -217,13 +217,7 @@ impl CPU {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        if self.register_a + value > 0xFF {
-            self.register_sr |= 0b0000_0001;
-            self.register_a += value + 1;
-        } else {
-            self.register_sr &= 0b1111_1110;
-            self.register_a += value;
-        }
+        self.register_a = self.register_a + value + 0b0000_0001;
 
         self.update_zero_and_negative_flags(self.register_a);
     }
@@ -259,7 +253,9 @@ impl CPU {
 
         self.update_zero_and_negative_flags(self.register_a & value);
 
-        if value > 0xFF {
+        let overflow_flag = (value >> 6) & 1;
+
+        if overflow_flag == 1 {
             self.register_sr |= 0b0100_0000;
         } else {
             self.register_sr &= 0b1011_1111;
