@@ -162,4 +162,44 @@ mod test {
 
         assert_eq!(cpu.register_pc, 0x01);
     }
+
+    #[test]
+    fn test_bvc_branch_if_overflow_clear() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x00, 0x50, 0x00]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_bvs_branch_if_overflow_set() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x00, 0x70, 0x00]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_cpm_compare_memory_with_accumulator() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x10, 0xC9, 0x10]);
+
+        assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
+    }
+
+    #[test]
+    fn test_cpx_compare_x_with_a() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x10, 0xE0, 0x10]);
+
+        assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
+    }
+
+    #[test]
+    fn test_cpy_compare_y_with_a() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x10, 0xC0, 0x10]);
+
+        assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
+    }
 }
