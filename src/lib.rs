@@ -180,7 +180,7 @@ mod test {
     }
 
     #[test]
-    fn test_cpm_compare_memory_with_accumulator() {
+    fn test_0xc9_cpm_compare_memory_with_accumulator() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x10, 0xC9, 0x10]);
 
@@ -188,17 +188,17 @@ mod test {
     }
 
     #[test]
-    fn test_cpx_compare_x_with_a() {
+    fn test_0xe0_cpx_compare_x_with_memory() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x10, 0xE0, 0x10]);
+        cpu.load_and_run(vec![0xa2, 0x10, 0xE0, 0x10]);
 
         assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
     }
 
     #[test]
-    fn test_cpy_compare_y_with_a() {
+    fn test_0xc0_cpy_compare_y_with_memmory() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x10, 0xC0, 0x10]);
+        cpu.load_and_run(vec![0xa0, 0x10, 0xC0, 0x10]);
 
         assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
     }
