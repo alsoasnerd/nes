@@ -65,37 +65,21 @@ mod test {
     }
 
     #[test]
-    fn test_0x69_adc_without_carry() {
+    fn test_0xe9_sbc_without_overflow() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x01, 0x69, 0x02]);
-
-        assert_eq!(cpu.register_a, 0x03);
-        assert_eq!(cpu.register_sr & 0b0000_0001, 0b0);
-    }
-
-    #[test]
-    fn test_0x69_adc_with_carry() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0xFF, 0x69, 0x01]);
+        cpu.load_and_run(vec![0xa9, 0x01, 0xe9, 0x01]);
 
         assert_eq!(cpu.register_a, 0x00);
-        assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
+        assert!(cpu.register_sr & 0b0000_0001 == 0b1);
     }
 
     #[test]
-    fn test_sbc_without_carry() {
+    fn test_0xe9_sbc_overflow() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x01, 0xE9, 0x02]);
+        cpu.load_and_run(vec![0xa9, 0x01, 0xe9, 0x02]);
 
         assert_eq!(cpu.register_a, 0xFF);
-    }
-
-    #[test]
-    fn test_sbc_with_carry() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x50, 0xE9, 0xf0]);
-
-        assert_eq!(cpu.register_a, 0x60);
+        assert_eq!(cpu.register_sr & 0b0000_0001, 0b0);
     }
 
     #[test]
@@ -180,7 +164,7 @@ mod test {
     }
 
     #[test]
-    fn test_cpm_compare_memory_with_accumulator() {
+    fn test_0xc9_cpm_compare_memory_with_accumulator() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x10, 0xC9, 0x10]);
 
@@ -188,17 +172,17 @@ mod test {
     }
 
     #[test]
-    fn test_cpx_compare_x_with_a() {
+    fn test_0xe0_cpx_compare_x_with_memory() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x10, 0xE0, 0x10]);
+        cpu.load_and_run(vec![0xa2, 0x10, 0xE0, 0x10]);
 
         assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
     }
 
     #[test]
-    fn test_cpy_compare_y_with_a() {
+    fn test_0xc0_cpy_compare_y_with_memmory() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x10, 0xC0, 0x10]);
+        cpu.load_and_run(vec![0xa0, 0x10, 0xC0, 0x10]);
 
         assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
     }
