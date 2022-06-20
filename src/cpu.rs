@@ -249,6 +249,10 @@ impl CPU {
                     self.ror(&opcode.mode);
                 }
 
+                0x40 => self.rti(),
+
+                0x60 => self.rts(),
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -526,6 +530,20 @@ impl CPU {
         } else {
             self.set_carry_flag(false);
         }
+    }
+
+    fn rti(&mut self) {
+        self.stack.pop().unwrap();
+        self.stack.pop().unwrap();
+    }
+
+    fn rts(&mut self) {
+        let low = self.stack.pop().unwrap();
+        let high = self.stack.pop().unwrap();
+
+        let address = u16::from_le_bytes([high, low]);
+
+        self.register_pc = address.wrapping_add(1);
     }
 
     fn sbc(&mut self, mode: &AddressingMode) {
