@@ -165,6 +165,8 @@ impl CPU {
                     self.bit(&opcode.mode);
                 }
 
+                0x00 => return,
+
                 0x18 => self.clc(),
 
                 0xD8 => self.cld(),
@@ -225,6 +227,20 @@ impl CPU {
                     self.lsr(&opcode.mode);
                 }
 
+                0xEA => {}
+
+                0x09 | 0x05 | 0x15 | 0x0D | 0x1D | 0x19 | 0x01 | 0x11 => {
+                    self.ora(&opcode.mode);
+                }
+
+                0x48 => self.pha(),
+
+                0x08 => self.php(),
+
+                0x68 => self.pla(),
+
+                0x28 => self.plp(),
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -234,11 +250,7 @@ impl CPU {
                 }
 
                 0xAA => self.tax(),
-                0x48 => self.pha(),
-                0x08 => self.php(),
-                0x68 => self.pla(),
-                0x28 => self.plp(),
-                0x00 => return,
+
                 _ => todo!(),
             }
 
@@ -433,18 +445,6 @@ impl CPU {
         self.update_negative_flag(self.register_y);
     }
 
-    fn sta(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        self.memmory.write(address, self.register_a);
-    }
-
-    fn tax(&mut self) {
-        self.register_x = self.register_a;
-
-        self.update_zero_flag(self.register_x);
-        self.update_negative_flag(self.register_x);
-    }
-
     fn lsr(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
@@ -456,18 +456,11 @@ impl CPU {
         self.update_negative_flag(self.register_a);
     }
 
-    fn sbc(&mut self, mode: &AddressingMode) {
+    fn ora(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
 
-        if self.register_a < self.register_a.wrapping_sub(value) {
-            self.set_carry_flag(false);
-        } else {
-            self.set_carry_flag(true);
-        }
-
-        self.register_a = self.register_a.wrapping_sub(value);
-
+        self.register_a |= value;
         self.update_zero_flag(self.register_a);
         self.update_negative_flag(self.register_a);
     }
@@ -492,6 +485,36 @@ impl CPU {
         let value = self.stack.pop().unwrap();
         self.register_sr = value;
     }
+
+    fn sbc(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        if self.register_a < self.register_a.wrapping_sub(value) {
+            self.set_carry_flag(false);
+        } else {
+            self.set_carry_flag(true);
+        }
+
+        self.register_a = self.register_a.wrapping_sub(value);
+
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
+    }
+
+    fn sta(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        self.memmory.write(address, self.register_a);
+    }
+
+    fn tax(&mut self) {
+        self.register_x = self.register_a;
+
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
+    }
+
+    
 
     fn update_zero_flag(&mut self, result: u8) {
         if result == 0 {
