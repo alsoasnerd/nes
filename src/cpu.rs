@@ -241,6 +241,14 @@ impl CPU {
 
                 0x28 => self.plp(),
 
+                0x2A | 0x26 | 0x36 | 0x2E | 0x3E => {
+                    self.rol(&opcode.mode);
+                }
+
+                0x6A | 0x66 | 0x76 | 0x6E | 0x7E => {
+                    self.ror(&opcode.mode);
+                }
+
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
                 }
@@ -484,6 +492,40 @@ impl CPU {
     fn plp(&mut self) {
         let value = self.stack.pop().unwrap();
         self.register_sr = value;
+    }
+
+    fn rol(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        let result = value << 1;
+        self.memmory.write(address, result);
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+
+        if self.register_sr & 0b0000_0001 == 0b1 {
+            self.set_carry_flag(true);
+        } else {
+            self.set_carry_flag(false);
+        }
+    }
+
+    fn ror(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        let result = value >> 1;
+        self.memmory.write(address, result);
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+
+        if self.register_sr & 0b0000_0001 == 0b1 {
+            self.set_carry_flag(true);
+        } else {
+            self.set_carry_flag(false);
+        }
     }
 
     fn sbc(&mut self, mode: &AddressingMode) {
