@@ -157,18 +157,6 @@ impl CPU {
                     self.asl(&opcode.mode);
                 }
 
-                0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
-                    self.lda(&opcode.mode);
-                }
-
-                0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
-                    self.ldx(&opcode.mode);
-                }
-
-                0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
-                    self.ldy(&opcode.mode);
-                }
-
                 0x90 | 0xB0 | 0xF0 | 0x30 | 0xd0 | 0x10 | 0x50 | 0x70 => {
                     self.branch(&opcode.mode);
                 }
@@ -220,6 +208,22 @@ impl CPU {
                 0x4C => self.jmp(&opcode.mode),
 
                 0x20 => self.jsr(&opcode.mode),
+
+                0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
+                    self.lda(&opcode.mode);
+                }
+
+                0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
+                    self.ldx(&opcode.mode);
+                }
+
+                0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
+                    self.ldy(&opcode.mode);
+                }
+
+                0x4A | 0x46 | 0x56 | 0x4E | 0x5E => {
+                    self.lsr(&opcode.mode);
+                }
 
                 0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
                     self.sta(&opcode.mode);
@@ -439,6 +443,17 @@ impl CPU {
 
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn lsr(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memmory.read(address);
+
+        self.register_a = value / 2;
+        self.memmory.write(address, self.register_a);
+
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn sbc(&mut self, mode: &AddressingMode) {
