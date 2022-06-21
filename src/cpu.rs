@@ -207,9 +207,20 @@ impl CPU {
 
                 0xC8 => self.iny(),
 
-                0x4C => self.jmp(&opcode.mode),
+                // JMP Absolute needs to subtract 1 from the address to get the correct address.
+                0x4C => {
+                    self.jmp(&opcode.mode);
+                    self.register_pc = self.register_pc.wrapping_sub(1);
+                }
 
-                0x20 => self.jsr(&opcode.mode),
+                // JMP indirect doesn't need to subtract 1 from the address.
+                0x6C => self.jmp(&opcode.mode),
+
+                // JSR needs to subtract 1 from the address to get the correct address.
+                0x20 => {
+                    self.jsr(&opcode.mode);
+                    self.register_pc = self.register_pc.wrapping_sub(1);
+                }
 
                 0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
                     self.lda(&opcode.mode);
@@ -580,8 +591,6 @@ impl CPU {
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
     }
-
-    
 
     fn update_zero_flag(&mut self, result: u8) {
         if result == 0 {
