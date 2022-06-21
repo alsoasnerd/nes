@@ -285,4 +285,31 @@ mod test {
 
         assert_eq!(cpu.register_x, 0x55);
     }
+
+    #[test]
+    fn test_0xa0_ldy_immediate() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa0, 0x10, 0x00]);
+
+        assert_eq!(cpu.register_y, 0x10);
+        assert_eq!(cpu.register_sr & 0b0000_0010, 0);
+        assert_eq!(cpu.register_sr & 0b1000_0000, 0);
+    }
+
+    #[test]
+    fn test_0xa4_ldy_zero_flag() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa4, 0x00, 0x00]);
+        assert_eq!(cpu.register_sr & 0b0000_0010, 0b10);
+    }
+
+    #[test]
+    fn test_ldy_from_memory() {
+        let mut cpu = CPU::new();
+        cpu.memmory.write(0x10, 0x55);
+
+        cpu.load_and_run(vec![0xa4, 0x10, 0x00]);
+
+        assert_eq!(cpu.register_y, 0x55);
+    }
 }
