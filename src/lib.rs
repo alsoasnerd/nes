@@ -39,14 +39,6 @@ mod test {
     }
 
     #[test]
-    fn test_inx_overflow() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0xff, 0xaa, 0xe8, 0xe8, 0x00]);
-
-        assert_eq!(cpu.register_x, 1)
-    }
-
-    #[test]
     fn test_lda_from_memory() {
         let mut cpu = CPU::new();
         cpu.memmory.write(0x10, 0x55);
@@ -217,5 +209,53 @@ mod test {
         cpu.load_and_run(vec![0xa2, 0x05, 0x41, 0x05]);
 
         assert_eq!(cpu.register_a, 0x00);
+    }
+
+    #[test]
+    fn test_0xe6_inc_increment_memory() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa2, 0x00, 0xE6, 0x00, 0xE6, 0x00]);
+
+        assert_eq!(cpu.memmory.array[0x00], 0x02);
+    }
+
+    #[test]
+    fn test_inx_increment_x() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xe8, 0xe8]);
+
+        assert_eq!(cpu.register_x, 0x02);
+    }
+
+    #[test]
+    fn test_iny_increment_y() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xc8, 0xc8]);
+
+        assert_eq!(cpu.register_y, 0x02);
+    }
+
+    #[test]
+    fn test_jmp_jump_to_address() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0x4c, 0x00, 0x01]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_jmp_indirect() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0x6c, 0x00, 0x01]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_jsr_jump_to_subroutine() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0x20, 0x00, 0x01]);
+
+        assert_eq!(cpu.register_pc, 0x01);
     }
 }
