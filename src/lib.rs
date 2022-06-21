@@ -234,4 +234,28 @@ mod test {
 
         assert_eq!(cpu.register_y, 0x02);
     }
+
+    #[test]
+    fn test_jmp_jump_to_address() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0x4c, 0x00, 0x01]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_jmp_indirect() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0x6c, 0x00, 0x01]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_jsr_jump_to_subroutine() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0x20, 0x00, 0x01]);
+
+        assert_eq!(cpu.register_pc, 0x01);
+    }
 }
