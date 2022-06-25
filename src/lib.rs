@@ -1,6 +1,6 @@
 pub mod cpu;
 pub mod opcodes;
-pub mod memmory;
+pub mod memory;
 
 #[cfg(test)]
 mod test {
@@ -27,7 +27,7 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa5, 0xc0, 0x85, 0x00]);
 
-        assert_eq!(cpu.memmory.array[0x8001], 0xc0);
+        assert_eq!(cpu.memory.array[0x8001], 0xc0);
     }
 
     #[test]
@@ -137,7 +137,7 @@ mod test {
     }
 
     #[test]
-    fn test_0xc0_cpy_compare_y_with_memmory() {
+    fn test_0xc0_cpy_compare_y_with_memory() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa0, 0x10, 0xC0, 0x10]);
 
@@ -149,7 +149,7 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa2, 0x00, 0xC6, 0x00, 0xC6, 0x00]);
 
-        assert_eq!(cpu.memmory.array[0x00], 0xFE);
+        assert_eq!(cpu.memory.array[0x00], 0xFE);
     }
 
     #[test]
@@ -181,7 +181,7 @@ mod test {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa2, 0x00, 0xE6, 0x00, 0xE6, 0x00]);
 
-        assert_eq!(cpu.memmory.array[0x00], 0x02);
+        assert_eq!(cpu.memory.array[0x00], 0x02);
     }
 
     #[test]
@@ -243,7 +243,7 @@ mod test {
     #[test]
     fn test_lda_from_memory() {
         let mut cpu = CPU::new();
-        cpu.memmory.write(0x10, 0x55);
+        cpu.memory.write(0x10, 0x55);
 
         cpu.load_and_run(vec![0xa5, 0x10, 0x00]);
 
@@ -270,7 +270,7 @@ mod test {
     #[test]
     fn test_ldx_from_memory() {
         let mut cpu = CPU::new();
-        cpu.memmory.write(0x10, 0x55);
+        cpu.memory.write(0x10, 0x55);
 
         cpu.load_and_run(vec![0xa6, 0x10, 0x00]);
 
@@ -297,7 +297,7 @@ mod test {
     #[test]
     fn test_ldy_from_memory() {
         let mut cpu = CPU::new();
-        cpu.memmory.write(0x10, 0x55);
+        cpu.memory.write(0x10, 0x55);
 
         cpu.load_and_run(vec![0xa4, 0x10, 0x00]);
 
@@ -307,12 +307,12 @@ mod test {
     #[test]
     fn test_0x4a_lsr_accumulator() {
         let mut cpu = CPU::new();
-        cpu.memmory.write(0x10, 0x0a);
+        cpu.memory.write(0x10, 0x0a);
 
         cpu.load_and_run(vec![0x4a, 0x00, 0xff, 0x78]);
 
         assert_eq!(cpu.register_a, 0x05);
-        assert_eq!(cpu.memmory.array[0x10], 0x05);
+        assert_eq!(cpu.memory.array[0x10], 0x05);
     }
 
     #[test]
@@ -335,7 +335,7 @@ mod test {
     #[test]
     fn test_0x2a_rol_accumulator() {
         let mut cpu = CPU::new();
-        cpu.memmory.write(0x10, 0x01);
+        cpu.memory.write(0x10, 0x01);
 
         cpu.load_and_run(vec![0xa9, 0x10, 0x2a]);
         assert_eq!(cpu.register_a, 0x02);
@@ -344,7 +344,7 @@ mod test {
     #[test]
     fn test_0x6a_ror_accumulator() {
         let mut cpu = CPU::new();
-        cpu.memmory.write(0x10, 0x02);
+        cpu.memory.write(0x10, 0x02);
 
         cpu.load_and_run(vec![0xa9, 0x10, 0x6a]);
         assert_eq!(cpu.register_a, 0x01);
