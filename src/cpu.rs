@@ -264,12 +264,18 @@ impl CPU {
 
                 0x60 => self.rts(),
 
-                0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
-                    self.sta(&opcode.mode);
-                }
-
                 0xE9 | 0xE5 | 0xF5 | 0xED | 0xFD | 0xF9 | 0xE1 | 0xF1 => {
                     self.sbc(&opcode.mode);
+                }
+
+                0x38 => self.sec(),
+
+                0xF8 => self.sed(),
+
+                0x78 => self.sei(),
+
+                0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
+                    self.sta(&opcode.mode);
                 }
 
                 0xAA => self.tax(),
@@ -288,9 +294,9 @@ impl CPU {
         let value = self.memmory.read(address);
 
         if self.register_a > self.register_a.wrapping_add(value) {
-            self.set_carry_flag(true);
+            self.sec();
         } else {
-            self.set_carry_flag(false);
+            self.clc();
         }
 
         self.register_a = self.register_a.wrapping_add(value);
@@ -343,15 +349,15 @@ impl CPU {
     }
 
     fn clc(&mut self) {
-        self.set_carry_flag(false);
+        self.register_sr &= 0b1111_1110;
     }
 
     fn cld(&mut self) {
-        self.set_decimal_flag(false);
+        self.register_sr &= 0b1110_1111;
     }
 
     fn cli(&mut self) {
-        self.set_interrupt_disable_flag(false);
+        self.register_sr &= 0b1111_0111;
     }
 
     fn clv(&mut self) {
@@ -364,9 +370,9 @@ impl CPU {
         let result = register.wrapping_sub(value);
 
         if register >= value {
-            self.set_carry_flag(true);
+            self.sec();
         } else {
-            self.set_carry_flag(false);
+            self.clc();
         }
 
         self.update_zero_flag(result);
@@ -519,34 +525,36 @@ impl CPU {
     fn rol(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
-
         let result = value << 1;
+
+        self.register_a = result;
         self.memmory.write(address, result);
 
         self.update_zero_flag(result);
         self.update_negative_flag(result);
 
         if self.register_sr & 0b0000_0001 == 0b1 {
-            self.set_carry_flag(true);
+            self.sec();
         } else {
-            self.set_carry_flag(false);
+            self.clc();
         }
     }
 
     fn ror(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memmory.read(address);
-
         let result = value >> 1;
+
+        self.register_a = result;
         self.memmory.write(address, result);
 
         self.update_zero_flag(result);
         self.update_negative_flag(result);
 
         if self.register_sr & 0b0000_0001 == 0b1 {
-            self.set_carry_flag(true);
+            self.sec();
         } else {
-            self.set_carry_flag(false);
+            self.clc();
         }
     }
 
@@ -561,7 +569,7 @@ impl CPU {
 
         let address = u16::from_le_bytes([high, low]);
 
-        self.register_pc = address.wrapping_add(1);
+        self.register_pc = address;
     }
 
     fn sbc(&mut self, mode: &AddressingMode) {
@@ -569,15 +577,27 @@ impl CPU {
         let value = self.memmory.read(address);
 
         if self.register_a < self.register_a.wrapping_sub(value) {
-            self.set_carry_flag(false);
+            self.sei();
         } else {
-            self.set_carry_flag(true);
+            self.clc();
         }
 
         self.register_a = self.register_a.wrapping_sub(value);
 
         self.update_zero_flag(self.register_a);
         self.update_negative_flag(self.register_a);
+    }
+
+    fn sec(&mut self) {
+        self.register_sr |= 0b0000_0001;
+    }
+
+    fn sed(&mut self) {
+        self.register_sr |= 0b0001_0000;
+    }
+
+    fn sei(&mut self) {
+        self.register_sr |= 0b0000_1000;
     }
 
     fn sta(&mut self, mode: &AddressingMode) {
@@ -605,30 +625,6 @@ impl CPU {
             self.register_sr |= 0b1000_0000;
         } else {
             self.register_sr &= 0b0111_1111;
-        }
-    }
-
-    fn set_carry_flag(&mut self, status: bool) {
-        if status {
-            self.register_sr |= 0b0000_0001;
-        } else {
-            self.register_sr &= 0b1111_1110;
-        }
-    }
-
-    fn set_decimal_flag(&mut self, status: bool) {
-        if status {
-            self.register_sr |= 0b0001_0000;
-        } else {
-            self.register_sr &= 0b1110_1111;
-        }
-    }
-
-    fn set_interrupt_disable_flag(&mut self, status: bool) {
-        if status {
-            self.register_sr |= 0b0000_1000;
-        } else {
-            self.register_sr &= 0b1111_0111;
         }
     }
 
