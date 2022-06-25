@@ -23,32 +23,6 @@ mod test {
     }
 
     #[test]
-    fn test_sta_0x85_and_lda() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa5, 0xc0, 0x85, 0x00]);
-
-        assert_eq!(cpu.memmory.array[0x8001], 0xc0);
-    }
-
-    #[test]
-    fn test_0xe9_sbc_without_overflow() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x01, 0xe9, 0x01]);
-
-        assert_eq!(cpu.register_a, 0x00);
-        assert!(cpu.register_sr & 0b0000_0001 == 0b1);
-    }
-
-    #[test]
-    fn test_0xe9_sbc_overflow() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x01, 0xe9, 0x02]);
-
-        assert_eq!(cpu.register_a, 0xFF);
-        assert_eq!(cpu.register_sr & 0b0000_0001, 0b0);
-    }
-
-    #[test]
     fn test_0x90_bcc_branch_if_carry_clear() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0x10, 0x90, 0x00]);
@@ -309,7 +283,7 @@ mod test {
         let mut cpu = CPU::new();
         cpu.memmory.write(0x10, 0x0a);
 
-        cpu.load_and_run(vec![0x4a, 0x00, 0xff, 0x78]);
+        cpu.load_and_run(vec![0xa9, 0x10, 0x4a]);
 
         assert_eq!(cpu.register_a, 0x05);
         assert_eq!(cpu.memmory.array[0x10], 0x05);
@@ -364,5 +338,47 @@ mod test {
 
         cpu.load_and_run(vec![0x20, 0x00, 0x01, 0x60]);
         assert_eq!(cpu.register_pc, 0x01);
+    }
+
+    #[test]
+    fn test_0xe9_sbc_without_overflow() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x01, 0xe9, 0x01]);
+
+        assert_eq!(cpu.register_a, 0x00);
+        assert_eq!(cpu.register_sr & 0b0000_0001, 0b0);
+    }
+
+    #[test]
+    fn test_0xe9_sbc_overflow() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x01, 0xe9, 0x02]);
+
+        assert_eq!(cpu.register_a, 0xFF);
+        assert_eq!(cpu.register_sr & 0b0000_0001, 0b1);
+    }
+
+    #[test]
+    fn test_sta_0x85() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa5, 0xc0, 0x85, 0x00]);
+
+        assert_eq!(cpu.memmory.array[0x8001], 0xc0);
+    }
+
+    #[test]
+    fn test_sty_0x84() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa6, 0xc0, 0x84, 0x00]);
+
+        assert_eq!(cpu.memmory.array[0x8001], 0xc0);
+    }
+
+    #[test]
+    fn test_stx_0x86() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa4, 0xc0, 0x86, 0x00]);
+
+        assert_eq!(cpu.memmory.array[0x8001], 0xc0);
     }
 }
