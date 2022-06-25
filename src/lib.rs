@@ -7,14 +7,6 @@ mod test {
     use crate::cpu::CPU;
 
     #[test]
-    fn test_0xaa_tax_move_a_to_x() {
-        let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa9, 0x0A, 0xaa, 0x00]);
-
-        assert_eq!(cpu.register_x, 10)
-    }
-
-    #[test]
     fn test_5_ops_working_together() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
@@ -367,6 +359,14 @@ mod test {
     }
 
     #[test]
+    fn test_stx_0x86() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa4, 0xc0, 0x86, 0x00]);
+
+        assert_eq!(cpu.memory.array[0x8001], 0xc0);
+    }
+
+    #[test]
     fn test_sty_0x84() {
         let mut cpu = CPU::new();
         cpu.load_and_run(vec![0xa6, 0xc0, 0x84, 0x00]);
@@ -375,10 +375,51 @@ mod test {
     }
 
     #[test]
-    fn test_stx_0x86() {
+    fn test_0xaa_tax_move_a_to_x() {
         let mut cpu = CPU::new();
-        cpu.load_and_run(vec![0xa4, 0xc0, 0x86, 0x00]);
+        cpu.load_and_run(vec![0xa9, 0x0A, 0xaa, 0x00]);
 
-        assert_eq!(cpu.memory.array[0x8001], 0xc0);
+        assert_eq!(cpu.register_x, 10)
+    }
+
+    #[test]
+    fn test_0xa8_tay_move_a_to_y() {
+        let mut cpu = CPU::new();
+        cpu.load_and_run(vec![0xa9, 0x0a, 0xa8, 0x00]);
+
+        assert_eq!(cpu.register_y, 0x0a);
+    }
+
+    #[test]
+    fn test_0xba_tsx_move_stack_to_x() {
+        let mut cpu = CPU::new();
+        cpu.stack.push(0x10);
+
+        cpu.load_and_run(vec![0xba, 0x00]);
+        assert_eq!(cpu.register_x, 0x10);
+    }
+
+    #[test]
+    fn test_0x8a_txa_move_x_to_a() {
+        let mut cpu = CPU::new();
+
+        cpu.load_and_run(vec![0xa2, 0x10, 0x8a, 0x00]);
+        assert_eq!(cpu.register_a, 0x10);
+    }
+
+    #[test]
+    fn test_0x9a_txs_move_x_to_stack() {
+        let mut cpu = CPU::new();
+
+        cpu.load_and_run(vec![0xa2, 0x10, 0x9a, 0x00]);
+        assert_eq!(cpu.stack.pop().unwrap(), 0x10);
+    }
+
+    #[test]
+    fn test_0x98_tya_move_y_to_a() {
+        let mut cpu = CPU::new();
+
+        cpu.load_and_run(vec![0xa0, 0x10, 0x98, 0x00]);
+        assert_eq!(cpu.register_a, 0x10);
     }
 }
