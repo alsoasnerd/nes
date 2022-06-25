@@ -585,7 +585,7 @@ impl CPU {
         let value = self.memmory.read(address);
 
         if self.register_a < self.register_a.wrapping_sub(value) {
-            self.sei();
+            self.sec();
         } else {
             self.clc();
         }
