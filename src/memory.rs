@@ -1,15 +1,15 @@
 #[derive(Debug)]
-pub struct Memmory {
+pub struct Memory {
     pub array: [u8; 0xFFFF],
 }
-impl Default for Memmory {
+impl Default for Memory {
     fn default() -> Self {
         Self::new()
     }
 }
-impl Memmory {
+impl Memory {
     pub fn new() -> Self {
-        Memmory { array: [0; 0xFFFF] }
+        Memory { array: [0; 0xFFFF] }
     }
     pub fn read(&self, address: u16) -> u8 {
         self.array[address as usize]
