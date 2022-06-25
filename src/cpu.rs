@@ -278,6 +278,14 @@ impl CPU {
                     self.sta(&opcode.mode);
                 }
 
+                0x86 | 0x96 | 0x8E => {
+                    self.stx(&opcode.mode);
+                }
+
+                0x84 | 0x94 | 0x8C => {
+                    self.sty(&opcode.mode);
+                }
+
                 0xAA => self.tax(),
 
                 _ => todo!(),
@@ -603,6 +611,16 @@ impl CPU {
     fn sta(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         self.memmory.write(address, self.register_a);
+    }
+
+    fn stx(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        self.memmory.write(address, self.register_x);
+    }
+
+    fn sty(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        self.memmory.write(address, self.register_y);
     }
 
     fn tax(&mut self) {
