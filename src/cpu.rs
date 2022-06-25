@@ -288,7 +288,17 @@ impl CPU {
 
                 0xAA => self.tax(),
 
-                _ => todo!(),
+                0xA8 => self.tay(),
+
+                0xBA => self.tsx(),
+
+                0x8A => self.txa(),
+
+                0x9A => self.txs(),
+
+                0x98 => self.tya(),
+
+                _ => panic!("OpCode {:x} is not recognized", code),
             }
 
             if pc_state == self.register_pc {
@@ -628,6 +638,41 @@ impl CPU {
 
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn tay(&mut self) {
+        self.register_y = self.register_a;
+
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
+    }
+
+    fn tsx(&mut self) {
+        self.register_x = self.stack[self.stack.len()];
+
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
+    }
+
+    fn txa(&mut self) {
+        self.register_a = self.register_x;
+
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
+    }
+
+    fn txs(&mut self) {
+        self.stack.push(self.register_x);
+
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
+    }
+
+    fn tya(&mut self) {
+        self.register_y = self.register_a;
+
+        self.update_zero_flag(self.register_y);
+        self.update_negative_flag(self.register_y);
     }
 
     fn update_zero_flag(&mut self, result: u8) {
