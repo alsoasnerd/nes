@@ -1,5 +1,5 @@
+use crate::{memory::Memory, opcodes};
 use std::collections::HashMap;
-use crate::{ opcodes, memory::Memory };
 
 pub const ROM_FIRST_BYTE: u16 = 0x8000;
 pub const ROM_FIRST_ADDRESS: u16 = 0xFFFC;
@@ -56,7 +56,7 @@ impl CPU {
             AddressingMode::Accumulator => self.register_a as u16,
             AddressingMode::Immediate => self.register_pc, // Get the address into register, not the value.
             AddressingMode::ZeroPage => self.memory.read(self.register_pc) as u16, // Get any value less then 256 bytes.
-            AddressingMode::Absolute => self.memory.read_u16(self.register_pc),    // Loads any value.
+            AddressingMode::Absolute => self.memory.read_u16(self.register_pc), // Loads any value.
 
             // Gets any value less then 256 bytes and add value of X register.
             AddressingMode::ZeroPageX => {
@@ -134,8 +134,17 @@ impl CPU {
     }
 
     pub fn run(&mut self) {
+        self.run_with_callback(|_| {});
+    }
+
+    pub fn run_with_callback<F>(&mut self, mut callback: F)
+    where
+        F: FnMut(&mut CPU),
+    {
         let opcodes: &HashMap<u8, &'static opcodes::OpCode> = &(*opcodes::OPCODES_HASHMAP);
         loop {
+            callback(self);
+
             let code = self.memory.read(self.register_pc);
             self.register_pc += 1;
             let pc_state = self.register_pc;
