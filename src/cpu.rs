@@ -648,7 +648,7 @@ impl CPU {
     }
 
     fn tsx(&mut self) {
-        self.register_x = self.stack[self.stack.len()];
+        self.register_x = self.stack[self.stack.len() - 1];
 
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
@@ -669,7 +669,7 @@ impl CPU {
     }
 
     fn tya(&mut self) {
-        self.register_y = self.register_a;
+        self.register_a = self.register_y;
 
         self.update_zero_flag(self.register_y);
         self.update_negative_flag(self.register_y);
