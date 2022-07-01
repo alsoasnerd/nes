@@ -1,136 +1,245 @@
-use crate::{memory::Memory, opcodes};
-use std::collections::HashMap;
+use crate::{opcodes::OpCode, assembly::Assembler};
+use bitflags::bitflags;
 
-pub const ROM_FIRST_BYTE: u16 = 0x8000;
-pub const ROM_FIRST_ADDRESS: u16 = 0xFFFC;
+bitflags! {
+    /// # Status Register (P) http://wiki.nesdev.com/w/index.php/Status_flags
+    ///
+    ///  7 6 5 4 3 2 1 0
+    ///  N V _ B D I Z C
+    ///  | |   | | | | +--- Carry Flag
+    ///  | |   | | | +----- Zero Flag
+    ///  | |   | | +------- Interrupt Disable
+    ///  | |   | +--------- Decimal Mode (not used on NES)
+    ///  | |   +----------- Break Command
+    ///  | +--------------- Overflow Flag
+    ///  +----------------- Negative Flag
+    ///
+    pub struct CpuFlags: u8 {
+        const CARRY             = 0b0000_0001;
+        const ZERO              = 0b0000_0010;
+        const INTERRUPT_DISABLE = 0b0000_0100;
+        const DECIMAL_MODE      = 0b0000_1000;
+        const BREAK             = 0b0001_0000;
+        const UNUSED            = 0b0010_0000;
+        const OVERFLOW          = 0b0100_0000;
+        const NEGATIVE          = 0b1000_0000;
+    }
+}
+
+const STACK: u16 = 0x0100;
+const STACK_RESET: u8 = 0xfd;
+
 
 #[derive(Debug)]
 pub enum AddressingMode {
-    Accumulator,
     Immediate,
     ZeroPage,
     ZeroPageX,
     ZeroPageY,
-    Relative,
     Absolute,
     AbsoluteX,
     AbsoluteY,
-    Indirect,
     IndirectX,
     IndirectY,
     NoneAddressing,
 }
 
-#[derive(Debug)]
+pub struct Memory {
+    pub content: [u8; 0xFFFF]
+}
+
+impl Memory {
+    pub fn new() -> Self {
+        Self {
+            content: [0; 0xFFFF]
+        }
+    }
+
+    pub fn read(&self, address: u16) -> u8 {
+        self.content[address as usize]
+    }
+
+    pub fn write(&mut self, address: u16, value: u8) {
+        self.content[address as usize] = value;
+    }
+
+    pub fn read_u16(&self, index: u16) -> u16 {
+        let low = self.read(index) as u16;
+        let high = self.read(index + 1) as u16;
+
+        (high << 8) | (low as u16)
+    }
+
+    pub fn write_u16(&mut self, index: u16, value: u16) {
+        let high = (value >> 8) as u8;
+        let low = (value & 0xff) as u8;
+
+        self.write(index, low);
+        self.write(index + 1, high);
+    }
+}
+
 pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
     pub register_y: u8,
-    pub register_sr: u8,
+    pub register_p: CpuFlags,
     pub register_pc: u16,
-    pub stack: Vec<u8>,
-    pub memory: Memory,
-}
-
-impl Default for CPU {
-    fn default() -> Self {
-        Self::new()
-    }
+    pub register_sp: u8,
+    pub memory: Memory
 }
 
 impl CPU {
     pub fn new() -> Self {
         CPU {
-            register_a: 0x00,
-            register_x: 0x00,
-            register_y: 0x00,
-            register_sr: 0b0000_0000,
-            register_pc: 0x00,
+            register_a: 0,
+            register_x: 0,
+            register_y: 0,
+            register_sp: STACK_RESET,
+            register_pc: 0,
+            register_p: CpuFlags::from_bits_truncate(0b0010_0100),
             memory: Memory::new(),
-            stack: Vec::new(),
         }
     }
 
-    fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
-        match mode {
-            AddressingMode::Accumulator => self.register_a as u16,
-            AddressingMode::Immediate => self.register_pc, // Get the address into register, not the value.
-            AddressingMode::ZeroPage => self.memory.read(self.register_pc) as u16, // Get any value less then 256 bytes.
-            AddressingMode::Absolute => self.memory.read_u16(self.register_pc), // Loads any value.
+    pub fn set_register_a(&mut self, value: u8) {
+        self.register_a = value;
+        self.update_zero_and_negative_flags(self.register_a);
+    }
 
-            // Gets any value less then 256 bytes and add value of X register.
-            AddressingMode::ZeroPageX => {
-                let position = self.memory.read(self.register_pc);
-                position.wrapping_add(self.register_x) as u16
-            }
+    pub fn update_zero_and_negative_flags(&mut self, result: u8) {
+        if result == 0 {
+            self.register_p.insert(CpuFlags::ZERO);
+        } else {
+            self.register_p.remove(CpuFlags::ZERO);
+        }
 
-            // Gets any value less then 256 bytes and add value of Y register.
-            AddressingMode::ZeroPageY => {
-                let position = self.memory.read(self.register_pc);
-                position.wrapping_add(self.register_y) as u16
-            }
+        if result >> 7 == 1 {
+            self.register_p.insert(CpuFlags::NEGATIVE);
+        } else {
+            self.register_p.remove(CpuFlags::NEGATIVE);
+        }
+    }
 
-            // Gets any address and add in PC.
-            AddressingMode::Relative => {
-                let position = self.memory.read(self.register_pc);
-                self.register_pc.wrapping_add(position as u16)
-            }
-
-            // Gets any value and add value of X register.
-            AddressingMode::AbsoluteX => {
-                let base = self.memory.read_u16(self.register_pc);
-                base.wrapping_add(self.register_x as u16)
-            }
-
-            // Gets any value and add value of Y register.
-            AddressingMode::AbsoluteY => {
-                let base = self.memory.read_u16(self.register_pc);
-                base.wrapping_add(self.register_y as u16)
-            }
-
-            // Gets any value of any address.
-            AddressingMode::Indirect => {
-                let base = self.memory.read_u16(self.register_pc);
-                self.memory.read_u16(base)
-            }
-
-            // Add value of X register in a zero page address, gets the value in this address, and ordenate him using Little Endian
-            AddressingMode::IndirectX => {
-                let base = self.memory.read(self.register_pc);
-                let pointer = base.wrapping_add(self.register_x);
-                let low = self.memory.read(pointer as u16);
-                let high = self.memory.read(pointer.wrapping_add(1) as u16);
-
-                u16::from_le_bytes([high, low])
-            }
-
-            // Dereference an zero page address using Little Endian and add the Y register in result.
-            AddressingMode::IndirectY => {
-                let base = self.memory.read(self.register_pc);
-                let low = self.memory.read(base as u16);
-                let high = self.memory.read(base.wrapping_add(1) as u16);
-                let deref_base = u16::from_le_bytes([high, low]);
-
-                deref_base.wrapping_add(self.register_y as u16)
-            }
-
-            AddressingMode::NoneAddressing => {
-                panic!("mode {:?} is not supported", mode);
-            }
+    pub fn update_negative_flags(&mut self, result: u8) {
+        if result >> 7 == 1 {
+            self.register_p.insert(CpuFlags::NEGATIVE)
+        } else {
+            self.register_p.remove(CpuFlags::NEGATIVE)
         }
     }
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {
         self.load(program);
         self.reset();
-        self.run();
+        self.run()
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
-        let program_space = ROM_FIRST_BYTE as usize..(ROM_FIRST_BYTE as usize + program.len());
+        self.memory.content[0x0600..(0x0600 + program.len())].copy_from_slice(&program[..]);
+        self.memory.write_u16(0xFFFC, 0x0600);
+    }
 
-        self.memory.array[program_space].copy_from_slice(&program[..]);
-        self.memory.write_u16(ROM_FIRST_ADDRESS, ROM_FIRST_BYTE);
+    pub fn reset(&mut self) {
+        self.register_a = 0;
+        self.register_x = 0;
+        self.register_y = 0;
+        self.register_sp = STACK_RESET;
+        self.register_p = CpuFlags::from_bits_truncate(0b0010_0100);
+
+        self.register_pc = self.memory.read_u16(0xFFFC);
+    }
+
+    pub fn set_carry_flag(&mut self) {
+        self.register_p.insert(CpuFlags::CARRY)
+    }
+
+    pub fn clear_carry_flag(&mut self) {
+        self.register_p.remove(CpuFlags::CARRY)
+    }
+
+    /// note: ignoring decimal mode
+    /// http://www.righto.com/2012/12/the-6502-overflow-flag-explained.html
+    pub fn add_to_register_a(&mut self, value: u8) {
+        let sum = self.register_a as u16
+            + value as u16
+            + (if self.register_p.contains(CpuFlags::CARRY) {
+                1
+            } else {
+                0
+            }) as u16;
+
+        let carry = sum > 0xff;
+
+        if carry {
+            self.register_p.insert(CpuFlags::CARRY);
+        } else {
+            self.register_p.remove(CpuFlags::CARRY);
+        }
+
+        let result = sum as u8;
+
+        if (value ^ result) & (result ^ self.register_a) & 0x80 != 0 {
+            self.register_p.insert(CpuFlags::OVERFLOW);
+        } else {
+            self.register_p.remove(CpuFlags::OVERFLOW)
+        }
+
+        self.set_register_a(result);
+    }
+
+    pub fn stack_pop(&mut self) -> u8 {
+        self.register_sp = self.register_sp.wrapping_add(1);
+        self.memory.read((STACK as u16) + self.register_sp as u16)
+    }
+
+    pub fn stack_push(&mut self, value: u8) {
+        self.memory.write((STACK as u16) + self.register_sp as u16, value);
+        self.register_sp = self.register_sp.wrapping_sub(1)
+    }
+
+    pub fn stack_push_u16(&mut self, value: u16) {
+        let high = (value >> 8) as u8;
+        let low = (value & 0xff) as u8;
+        self.stack_push(high);
+        self.stack_push(low);
+    }
+
+    pub fn stack_pop_u16(&mut self) -> u16 {
+        let low = self.stack_pop() as u16;
+        let high = self.stack_pop() as u16;
+
+        high << 8 | low
+    }
+
+    pub fn compare(&mut self, mode: &AddressingMode, compare_with: u8) {
+        let address = self.get_operand_address(mode);
+        let value = self.memory.read(address);
+        if value <= compare_with {
+            self.register_p.insert(CpuFlags::CARRY);
+        } else {
+            self.register_p.remove(CpuFlags::CARRY);
+        }
+
+        self.update_zero_and_negative_flags(compare_with.wrapping_sub(value));
+    }
+
+    pub fn branch(&mut self, condition: bool) {
+        if condition {
+            let jump: i8 = self.memory.read(self.register_pc) as i8;
+            let jump_addr = self
+                .register_pc
+                .wrapping_add(1)
+                .wrapping_add(jump as u16);
+
+            self.register_pc = jump_addr;
+        }
+    }
+
+    pub fn update_pc(&mut self, opcode: &&OpCode, pc_state: u16) {
+        if pc_state == self.register_pc {
+            self.register_pc += (opcode.len - 1) as u16;
+        }
     }
 
     pub fn run(&mut self) {
@@ -141,580 +250,472 @@ impl CPU {
     where
         F: FnMut(&mut CPU),
     {
-        let opcodes: &HashMap<u8, &'static opcodes::OpCode> = &(*opcodes::OPCODES_HASHMAP);
-        loop {
-            callback(self);
+        let assembler = Assembler::new();
 
+        loop {
             let code = self.memory.read(self.register_pc);
             self.register_pc += 1;
-            let pc_state = self.register_pc;
 
-            let opcode = opcodes.get(&code).unwrap_or_else(|| {
-                panic!("OpCode {:x} is not recognized", code);
-            });
+            assembler.interpret(self, code);
 
-            match code {
-                0x69 | 0x65 | 0x75 | 0x6d | 0x7d | 0x79 | 0x61 | 0x71 => {
-                    self.adc(&opcode.mode);
-                }
+            callback(self);
+        }
+    }
 
-                0x29 | 0x25 | 0x35 | 0x2d | 0x3d | 0x39 | 0x21 | 0x31 => {
-                    self.and(&opcode.mode);
-                }
+    pub fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
+        match mode {
+            AddressingMode::Immediate => self.register_pc,
 
-                0x0a | 0x1a => {
-                    self.asl(&opcode.mode);
-                }
+            AddressingMode::ZeroPage => self.memory.read(self.register_pc) as u16,
 
-                0x90 | 0xB0 | 0xF0 | 0x30 | 0xd0 | 0x10 | 0x50 | 0x70 => {
-                    self.branch(&opcode.mode);
-                }
+            AddressingMode::Absolute => self.memory.read_u16(self.register_pc),
 
-                0x24 | 0x2C => {
-                    self.bit(&opcode.mode);
-                }
-
-                0x00 => return,
-
-                0x18 => self.clc(),
-
-                0xD8 => self.cld(),
-
-                0x58 => self.cli(),
-
-                0xB8 => self.clv(),
-
-                0xC9 | 0xC5 | 0xD5 | 0xCD | 0xDD | 0xD9 | 0xC1 | 0xD1 => {
-                    self.cmp(self.register_a, &opcode.mode);
-                }
-
-                0xE0 | 0xE4 | 0xEC => {
-                    self.cmp(self.register_x, &opcode.mode);
-                }
-
-                0xC0 | 0xC4 | 0xCC => {
-                    self.cmp(self.register_y, &opcode.mode);
-                }
-
-                0xC6 | 0xCE | 0xD6 | 0xDE => {
-                    self.dec(&opcode.mode);
-                }
-
-                0xCA => self.dex(),
-
-                0x88 => self.dey(),
-
-                0x49 | 0x45 | 0x55 | 0x4D | 0x5D | 0x59 | 0x41 | 0x51 => {
-                    self.eor(&opcode.mode);
-                }
-
-                0xE6 | 0xEE | 0xF6 | 0xFE => {
-                    self.inc(&opcode.mode);
-                }
-
-                0xE8 => self.inx(),
-
-                0xC8 => self.iny(),
-
-                // JMP Absolute needs to subtract 1 from the address to get the correct address.
-                0x4C => {
-                    self.jmp(&opcode.mode);
-                    self.register_pc = self.register_pc.wrapping_sub(1);
-                }
-
-                // JMP indirect doesn't need to subtract 1 from the address.
-                0x6C => self.jmp(&opcode.mode),
-
-                // JSR needs to subtract 1 from the address to get the correct address.
-                0x20 => {
-                    self.jsr(&opcode.mode);
-                    self.register_pc = self.register_pc.wrapping_sub(1);
-                }
-
-                0xA9 | 0xA5 | 0xB5 | 0xAD | 0xBD | 0xB9 | 0xA1 | 0xB1 => {
-                    self.lda(&opcode.mode);
-                }
-
-                0xA2 | 0xA6 | 0xB6 | 0xAE | 0xBE => {
-                    self.ldx(&opcode.mode);
-                }
-
-                0xA0 | 0xA4 | 0xB4 | 0xAC | 0xBC => {
-                    self.ldy(&opcode.mode);
-                }
-
-                0x4A | 0x46 | 0x56 | 0x4E | 0x5E => {
-                    self.lsr(&opcode.mode);
-                }
-
-                0xEA => {}
-
-                0x09 | 0x05 | 0x15 | 0x0D | 0x1D | 0x19 | 0x01 | 0x11 => {
-                    self.ora(&opcode.mode);
-                }
-
-                0x48 => self.pha(),
-
-                0x08 => self.php(),
-
-                0x68 => self.pla(),
-
-                0x28 => self.plp(),
-
-                0x2A | 0x26 | 0x36 | 0x2E | 0x3E => {
-                    self.rol(&opcode.mode);
-                }
-
-                0x6A | 0x66 | 0x76 | 0x6E | 0x7E => {
-                    self.ror(&opcode.mode);
-                }
-
-                0x40 => self.rti(),
-
-                0x60 => self.rts(),
-
-                0xE9 | 0xE5 | 0xF5 | 0xED | 0xFD | 0xF9 | 0xE1 | 0xF1 => {
-                    self.sbc(&opcode.mode);
-                }
-
-                0x38 => self.sec(),
-
-                0xF8 => self.sed(),
-
-                0x78 => self.sei(),
-
-                0x85 | 0x95 | 0x8d | 0x9D | 0x99 | 0x81 | 0x91 => {
-                    self.sta(&opcode.mode);
-                }
-
-                0x86 | 0x96 | 0x8E => {
-                    self.stx(&opcode.mode);
-                }
-
-                0x84 | 0x94 | 0x8C => {
-                    self.sty(&opcode.mode);
-                }
-
-                0xAA => self.tax(),
-
-                0xA8 => self.tay(),
-
-                0xBA => self.tsx(),
-
-                0x8A => self.txa(),
-
-                0x9A => self.txs(),
-
-                0x98 => self.tya(),
-
-                _ => panic!("OpCode {:x} is not recognized", code),
+            AddressingMode::ZeroPageX => {
+                let index = self.memory.read(self.register_pc);
+                let address = index.wrapping_add(self.register_x) as u16;
+                address
+            }
+            AddressingMode::ZeroPageY => {
+                let index = self.memory.read(self.register_pc);
+                let address = index.wrapping_add(self.register_y) as u16;
+                address
             }
 
-            if pc_state == self.register_pc {
-                self.register_pc += (opcode.len - 1) as u16
+            AddressingMode::AbsoluteX => {
+                let base = self.memory.read_u16(self.register_pc);
+                let address = base.wrapping_add(self.register_x as u16);
+                address
+            }
+            AddressingMode::AbsoluteY => {
+                let base = self.memory.read_u16(self.register_pc);
+                let address = base.wrapping_add(self.register_y as u16);
+                address
+            }
+
+            AddressingMode::IndirectX => {
+                let base = self.memory.read(self.register_pc);
+
+                let ptr: u8 = (base as u8).wrapping_add(self.register_x);
+                let low = self.memory.read(ptr as u16);
+                let high = self.memory.read(ptr.wrapping_add(1) as u16);
+                (high as u16) << 8 | (low as u16)
+            }
+            AddressingMode::IndirectY => {
+                let base = self.memory.read(self.register_pc);
+
+                let low = self.memory.read(base as u16);
+                let high = self.memory.read((base as u8).wrapping_add(1) as u16);
+                let deref_base = (high as u16) << 8 | (low as u16);
+                let deref = deref_base.wrapping_add(self.register_y as u16);
+                deref
+            }
+
+            AddressingMode::NoneAddressing => {
+                panic!("mode {:?} is not supported", mode);
             }
         }
     }
 
-    fn adc(&mut self, mode: &AddressingMode) {
+    pub fn adc(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memory.read(address);
+        self.add_to_register_a(value);
+    }
 
-        if self.register_a > self.register_a.wrapping_add(value) {
-            self.sec();
+    pub fn and(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memory.read(address);
+        self.set_register_a(value & self.register_a);
+    }
+
+    pub fn asl_accumulator(&mut self) {
+        let mut value = self.register_a;
+        if value >> 7 == 1 {
+            self.set_carry_flag();
         } else {
-            self.clc();
+            self.clear_carry_flag();
+        }
+        value = value << 1;
+        self.set_register_a(value)
+    }
+
+    pub fn asl(&mut self, mode: &AddressingMode) -> u8 {
+        let address = self.get_operand_address(mode);
+        let mut value = self.memory.read(address);
+        if value >> 7 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.clear_carry_flag();
+        }
+        value = value << 1;
+        self.memory.write(address, value);
+        self.update_zero_and_negative_flags(value);
+        value
+    }
+
+    pub fn bcc(&mut self) {
+        self.branch(!self.register_p.contains(CpuFlags::CARRY));
+    }
+
+    pub fn bcs(&mut self) {
+        self.branch(self.register_p.contains(CpuFlags::CARRY));
+    }
+
+    pub fn beq(&mut self) {
+        self.branch(self.register_p.contains(CpuFlags::ZERO));
+    }
+
+    pub fn bit(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memory.read(address);
+        let and = self.register_a & value;
+        if and == 0 {
+            self.register_p.insert(CpuFlags::ZERO);
+        } else {
+            self.register_p.remove(CpuFlags::ZERO);
         }
 
-        self.register_a = self.register_a.wrapping_add(value);
-
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
+        self.register_p.set(CpuFlags::NEGATIVE, value & 0b10000000 > 0);
+        self.register_p.set(CpuFlags::OVERFLOW, value & 0b01000000 > 0);
     }
 
-    fn and(&mut self, mode: &AddressingMode) {
+    pub fn bmi(&mut self) {
+        self.branch(self.register_p.contains(CpuFlags::NEGATIVE));
+    }
+
+    pub fn bne(&mut self) {
+        self.branch(!self.register_p.contains(CpuFlags::ZERO));
+    }
+
+    pub fn bpl(&mut self) {
+        self.branch(!self.register_p.contains(CpuFlags::NEGATIVE));
+    }
+
+    // BRK is a simple return in Assembler interpreter function
+
+    pub fn bvc(&mut self) {
+        self.branch(!self.register_p.contains(CpuFlags::OVERFLOW));
+    }
+
+    pub fn bvs(&mut self) {
+        self.branch(self.register_p.contains(CpuFlags::OVERFLOW));
+    }
+
+    pub fn clc(&mut self) {
+        self.clear_carry_flag();
+    }
+
+    pub fn cld(&mut self) {
+        self.register_p.remove(CpuFlags::DECIMAL_MODE);
+    }
+
+    pub fn cli(&mut self) {
+        self.register_p.remove(CpuFlags::INTERRUPT_DISABLE);
+    }
+
+    pub fn clv(&mut self) {
+        self.register_p.remove(CpuFlags::OVERFLOW);
+    }
+
+    pub fn cmp(&mut self, mode: &AddressingMode) {
+        self.compare(mode, self.register_a);
+    }
+
+    pub fn cpx(&mut self, mode: &AddressingMode) {
+        self.compare(mode, self.register_x);
+    }
+
+    pub fn cpy(&mut self, mode: &AddressingMode) {
+        self.compare(mode, self.register_y);
+    }
+
+    pub fn dec(&mut self, mode: &AddressingMode) -> u8 {
         let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-
-        self.register_a &= value;
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
+        let mut value = self.memory.read(address);
+        value = value.wrapping_sub(1);
+        self.memory.write(address, value);
+        self.update_zero_and_negative_flags(value);
+        value
     }
 
-    fn asl(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-
-        self.register_a = value * 2;
-        self.memory.write(address, self.register_a);
-
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
-    }
-
-    fn branch(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-
-        self.register_pc = value as u16;
-    }
-
-    fn bit(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-
-        self.update_zero_flag(self.register_a & value);
-        self.update_negative_flag(value);
-
-        let overflow_flag = (value >> 6) & 1;
-
-        if overflow_flag == 1 {
-            self.set_overflow_flag(true);
-        } else {
-            self.set_overflow_flag(false);
-        }
-    }
-
-    fn clc(&mut self) {
-        self.register_sr &= 0b1111_1110;
-    }
-
-    fn cld(&mut self) {
-        self.register_sr &= 0b1110_1111;
-    }
-
-    fn cli(&mut self) {
-        self.register_sr &= 0b1111_0111;
-    }
-
-    fn clv(&mut self) {
-        self.set_overflow_flag(false);
-    }
-
-    fn cmp(&mut self, register: u8, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-        let result = register.wrapping_sub(value);
-
-        if register >= value {
-            self.sec();
-        } else {
-            self.clc();
-        }
-
-        self.update_zero_flag(result);
-        self.update_negative_flag(result);
-    }
-
-    fn dec(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-
-        let result = value.wrapping_sub(1);
-        self.memory.write(address, result);
-
-        self.update_zero_flag(result);
-        self.update_negative_flag(result);
-    }
-
-    fn dex(&mut self) {
+    pub fn dex(&mut self) {
         self.register_x = self.register_x.wrapping_sub(1);
-        self.update_zero_flag(self.register_x);
-        self.update_negative_flag(self.register_x);
+        self.update_zero_and_negative_flags(self.register_x);
     }
 
-    fn dey(&mut self) {
+    pub fn dey(&mut self) {
         self.register_y = self.register_y.wrapping_sub(1);
-        self.update_zero_flag(self.register_y);
-        self.update_negative_flag(self.register_y);
+        self.update_zero_and_negative_flags(self.register_y);
     }
 
-    fn eor(&mut self, mode: &AddressingMode) {
+    pub fn eor(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memory.read(address);
-
-        self.register_a ^= value;
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
+        self.set_register_a(value ^ self.register_a);
     }
 
-    fn inc(&mut self, mode: &AddressingMode) {
+    pub fn inc(&mut self, mode: &AddressingMode) -> u8 {
         let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-
-        let result = value.wrapping_add(1);
-        self.memory.write(address, result);
-
-        self.update_zero_flag(result);
-        self.update_negative_flag(result);
+        let mut value = self.memory.read(address);
+        value = value.wrapping_add(1);
+        self.memory.write(address, value);
+        self.update_zero_and_negative_flags(value);
+        value
     }
 
-    fn inx(&mut self) {
+    pub fn inx(&mut self) {
         self.register_x = self.register_x.wrapping_add(1);
-
-        self.update_zero_flag(self.register_x);
-        self.update_negative_flag(self.register_x);
+        self.update_zero_and_negative_flags(self.register_x);
     }
 
-    fn iny(&mut self) {
+    pub fn iny(&mut self) {
         self.register_y = self.register_y.wrapping_add(1);
-
-        self.update_zero_flag(self.register_y);
-        self.update_negative_flag(self.register_y);
+        self.update_zero_and_negative_flags(self.register_y);
     }
 
-    fn jmp(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        self.register_pc = address;
+    pub fn jmp_absolute(&mut self) {
+        let memory_address = self.memory.read_u16(self.register_pc);
+        self.register_pc = memory_address;
     }
 
-    fn jsr(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let return_address = self.register_pc.wrapping_sub(1);
+    pub fn jmp_indirect(&mut self) {
+        let memory_address = self.memory.read_u16(self.register_pc);
 
-        let low = (return_address >> 8) as u8;
-        let high = (return_address & 0xFF) as u8;
+        let indirect_reference = if memory_address & 0x00FF == 0x00FF {
+            let low = self.memory.read(memory_address);
+            let high = self.memory.read(memory_address & 0xFF00);
+            (high as u16) << 8 | (low as u16)
+        } else {
+            self.memory.read_u16(memory_address)
+        };
 
-        self.stack.push(high);
-        self.stack.push(low);
-
-        self.register_pc = address;
+        self.register_pc = indirect_reference;
     }
 
-    fn lda(&mut self, mode: &AddressingMode) {
+    pub fn jsr(&mut self) {
+        self.stack_push_u16(self.register_pc + 2 - 1);
+        let target_address = self.memory.read_u16(self.register_pc);
+
+        self.register_pc = target_address;
+    }
+
+    pub fn lda(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(&mode);
+        let value = self.memory.read(address);
+        self.set_register_a(value);
+    }
+
+    pub fn ldx(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memory.read(address);
-
-        self.register_a = value;
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
-    }
-
-    fn ldx(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-
         self.register_x = value;
-        self.update_zero_flag(self.register_x);
-        self.update_negative_flag(self.register_x);
+        self.update_zero_and_negative_flags(self.register_x);
     }
 
-    fn ldy(&mut self, mode: &AddressingMode) {
+    pub fn ldy(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memory.read(address);
-
         self.register_y = value;
-        self.update_zero_flag(self.register_y);
-        self.update_negative_flag(self.register_y);
+        self.update_zero_and_negative_flags(self.register_y);
     }
 
-    fn lsr(&mut self, mode: &AddressingMode) {
+    pub fn lsr_accumulator(&mut self) {
+        let mut value = self.register_a;
+        if value & 1 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.clear_carry_flag();
+        }
+        value = value >> 1;
+        self.set_register_a(value)
+    }
+
+    pub fn lsr(&mut self, mode: &AddressingMode) -> u8 {
+        let address = self.get_operand_address(mode);
+        let mut value = self.memory.read(address);
+        if value & 1 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.clear_carry_flag();
+        }
+        value = value >> 1;
+        self.memory.write(address, value);
+        self.update_zero_and_negative_flags(value);
+        value
+    }
+
+    // NOP is a simple {} in Assembler interpret function
+
+    pub fn ora(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let value = self.memory.read(address);
+        self.set_register_a(value | self.register_a);
+    }
 
-        self.register_a = value / 2;
+    pub fn pha(&mut self) {
+        self.stack_push(self.register_a);
+    }
+
+    pub fn php(&mut self) {
+        //http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior
+        let mut flags = self.register_p.clone();
+        flags.insert(CpuFlags::BREAK);
+        flags.insert(CpuFlags::UNUSED);
+        self.stack_push(flags.bits());
+    }
+
+    pub fn pla(&mut self) {
+        let value = self.stack_pop();
+        self.set_register_a(value);
+    }
+
+    pub fn plp(&mut self) {
+        self.register_p.bits = self.stack_pop();
+        self.register_p.remove(CpuFlags::BREAK);
+        self.register_p.insert(CpuFlags::UNUSED);
+    }
+
+    pub fn rol_accumulator(&mut self) {
+        let mut value = self.register_a;
+        let old_carry = self.register_p.contains(CpuFlags::CARRY);
+
+        if value >> 7 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.clear_carry_flag();
+        }
+        value = value << 1;
+        if old_carry {
+            value = value | 1;
+        }
+        self.set_register_a(value);
+    }
+
+    pub fn rol(&mut self, mode: &AddressingMode) -> u8 {
+        let address = self.get_operand_address(mode);
+        let mut value = self.memory.read(address);
+        let old_carry = self.register_p.contains(CpuFlags::CARRY);
+
+        if value >> 7 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.clear_carry_flag();
+        }
+        value = value << 1;
+        if old_carry {
+            value = value | 1;
+        }
+        self.memory.write(address, value);
+        self.update_negative_flags(value);
+        value
+    }
+
+    pub fn ror_accumulator(&mut self) {
+        let mut value = self.register_a;
+        let old_carry = self.register_p.contains(CpuFlags::CARRY);
+
+        if value & 1 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.clear_carry_flag();
+        }
+        value = value >> 1;
+        if old_carry {
+            value = value | 0b10000000;
+        }
+        self.set_register_a(value);
+    }
+
+    pub fn ror(&mut self, mode: &AddressingMode) -> u8 {
+        let address = self.get_operand_address(mode);
+        let mut value = self.memory.read(address);
+        let old_carry = self.register_p.contains(CpuFlags::CARRY);
+
+        if value & 1 == 1 {
+            self.set_carry_flag();
+        } else {
+            self.clear_carry_flag();
+        }
+        value = value >> 1;
+        if old_carry {
+            value = value | 0b10000000;
+        }
+        self.memory.write(address, value);
+        self.update_negative_flags(value);
+        value
+    }
+
+    pub fn rti(&mut self) {
+        self.register_p.bits = self.stack_pop();
+        self.register_p.remove(CpuFlags::BREAK);
+        self.register_p.insert(CpuFlags::UNUSED);
+
+        self.register_pc = self.stack_pop_u16();
+    }
+
+    pub fn rts(&mut self){
+        self.register_pc = self.stack_pop_u16() + 1;
+    }
+
+    pub fn sbc(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(&mode);
+        let value = self.memory.read(address);
+        self.add_to_register_a(((value as i8).wrapping_neg().wrapping_sub(1)) as u8);
+    }
+
+    pub fn sec(&mut self) {
+        self.set_carry_flag();
+    }
+
+    pub fn sed(&mut self) {
+        self.register_p.insert(CpuFlags::DECIMAL_MODE);
+    }
+
+    pub fn sei(&mut self) {
+        self.register_p.insert(CpuFlags::INTERRUPT_DISABLE);
+    }
+
+    pub fn sta(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
         self.memory.write(address, self.register_a);
-
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
     }
 
-    fn ora(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-
-        self.register_a |= value;
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
-    }
-
-    fn pha(&mut self) {
-        self.stack.push(self.register_a);
-    }
-
-    fn php(&mut self) {
-        self.stack.push(self.register_sr);
-    }
-
-    fn pla(&mut self) {
-        let value = self.stack.pop().unwrap();
-        self.register_a = value;
-
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
-    }
-
-    fn plp(&mut self) {
-        let value = self.stack.pop().unwrap();
-        self.register_sr = value;
-    }
-
-    fn rol(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-        let result = value << 1;
-
-        self.register_a = result;
-        self.memory.write(address, result);
-
-        self.update_zero_flag(result);
-        self.update_negative_flag(result);
-
-        if self.register_sr & 0b0000_0001 == 0b1 {
-            self.sec();
-        } else {
-            self.clc();
-        }
-    }
-
-    fn ror(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-        let result = value >> 1;
-
-        self.register_a = result;
-        self.memory.write(address, result);
-
-        self.update_zero_flag(result);
-        self.update_negative_flag(result);
-
-        if self.register_sr & 0b0000_0001 == 0b1 {
-            self.sec();
-        } else {
-            self.clc();
-        }
-    }
-
-    fn rti(&mut self) {
-        self.stack.pop().unwrap();
-        self.stack.pop().unwrap();
-    }
-
-    fn rts(&mut self) {
-        let low = self.stack.pop().unwrap();
-        let high = self.stack.pop().unwrap();
-
-        let address = u16::from_le_bytes([high, low]);
-
-        self.register_pc = address;
-    }
-
-    fn sbc(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        let value = self.memory.read(address);
-
-        if self.register_a < self.register_a.wrapping_sub(value) {
-            self.sec();
-        } else {
-            self.clc();
-        }
-
-        self.register_a = self.register_a.wrapping_sub(value);
-
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
-    }
-
-    fn sec(&mut self) {
-        self.register_sr |= 0b0000_0001;
-    }
-
-    fn sed(&mut self) {
-        self.register_sr |= 0b0001_0000;
-    }
-
-    fn sei(&mut self) {
-        self.register_sr |= 0b0000_1000;
-    }
-
-    fn sta(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
-        self.memory.write(address, self.register_a);
-    }
-
-    fn stx(&mut self, mode: &AddressingMode) {
+    pub fn stx(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         self.memory.write(address, self.register_x);
     }
 
-    fn sty(&mut self, mode: &AddressingMode) {
+    pub fn sty(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         self.memory.write(address, self.register_y);
     }
 
-    fn tax(&mut self) {
+    pub fn tax(&mut self) {
         self.register_x = self.register_a;
-
-        self.update_zero_flag(self.register_x);
-        self.update_negative_flag(self.register_x);
+        self.update_zero_and_negative_flags(self.register_x);
     }
 
-    fn tay(&mut self) {
+    pub fn tay(&mut self) {
         self.register_y = self.register_a;
-
-        self.update_zero_flag(self.register_x);
-        self.update_negative_flag(self.register_x);
+        self.update_zero_and_negative_flags(self.register_y);
     }
 
-    fn tsx(&mut self) {
-        self.register_x = self.stack[self.stack.len() - 1];
-
-        self.update_zero_flag(self.register_x);
-        self.update_negative_flag(self.register_x);
+    pub fn tsx(&mut self) {
+        self.register_x = self.register_sp;
+        self.update_zero_and_negative_flags(self.register_x);
     }
 
-    fn txa(&mut self) {
+    pub fn txa(&mut self) {
         self.register_a = self.register_x;
-
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
+        self.update_zero_and_negative_flags(self.register_a);
     }
 
-    fn txs(&mut self) {
-        self.stack.push(self.register_x);
-
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
+    pub fn txs(&mut self) {
+        self.register_sp = self.register_x;
     }
 
-    fn tya(&mut self) {
+    pub fn tya(&mut self) {
         self.register_a = self.register_y;
-
-        self.update_zero_flag(self.register_y);
-        self.update_negative_flag(self.register_y);
-    }
-
-    fn update_zero_flag(&mut self, result: u8) {
-        if result == 0 {
-            self.register_sr |= 0b0000_0010;
-        } else {
-            self.register_sr &= 0b1111_1101;
-        }
-    }
-
-    fn update_negative_flag(&mut self, result: u8) {
-        if result & 0b1000_0000 != 0 {
-            self.register_sr |= 0b1000_0000;
-        } else {
-            self.register_sr &= 0b0111_1111;
-        }
-    }
-
-    fn set_overflow_flag(&mut self, status: bool) {
-        if status {
-            self.register_sr |= 0b0100_0000;
-        } else {
-            self.register_sr &= 0b1011_1111;
-        }
-    }
-
-    pub fn reset(&mut self) {
-        self.register_a = 0x00;
-        self.register_x = 0x00;
-        self.register_y = 0x00;
-        self.register_sr = 0b0000_0000;
-        self.register_pc = 0x00;
-
-        self.register_pc = self.memory.read_u16(ROM_FIRST_ADDRESS);
+        self.update_zero_and_negative_flags(self.register_a);
     }
 }
