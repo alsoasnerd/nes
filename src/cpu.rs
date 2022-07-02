@@ -256,9 +256,13 @@ impl CPU {
             let code = self.memory.read(self.register_pc);
             self.register_pc += 1;
 
-            assembler.interpret(self, code);
+            let program_ended = assembler.interpret(self, code);
 
-            callback(self);
+            if program_ended {
+                break;
+            } else {
+                callback(self)
+            }
         }
     }
 
