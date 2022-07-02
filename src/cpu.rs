@@ -1,4 +1,4 @@
-use crate::{opcodes::OpCode, assembly::Assembler};
+use crate::{assembly::Assembler, opcodes::OpCode};
 use bitflags::bitflags;
 
 bitflags! {
@@ -29,7 +29,6 @@ bitflags! {
 const STACK: u16 = 0x0100;
 const STACK_RESET: u8 = 0xfd;
 
-
 #[derive(Debug)]
 pub enum AddressingMode {
     Immediate,
@@ -45,13 +44,13 @@ pub enum AddressingMode {
 }
 
 pub struct Memory {
-    pub content: [u8; 0xFFFF]
+    pub content: [u8; 0xFFFF],
 }
 
 impl Memory {
     pub fn new() -> Self {
         Self {
-            content: [0; 0xFFFF]
+            content: [0; 0xFFFF],
         }
     }
 
@@ -86,7 +85,7 @@ pub struct CPU {
     pub register_p: CpuFlags,
     pub register_pc: u16,
     pub register_sp: u8,
-    pub memory: Memory
+    pub memory: Memory,
 }
 
 impl CPU {
@@ -194,7 +193,8 @@ impl CPU {
     }
 
     pub fn stack_push(&mut self, value: u8) {
-        self.memory.write((STACK as u16) + self.register_sp as u16, value);
+        self.memory
+            .write((STACK as u16) + self.register_sp as u16, value);
         self.register_sp = self.register_sp.wrapping_sub(1)
     }
 
@@ -227,10 +227,7 @@ impl CPU {
     pub fn branch(&mut self, condition: bool) {
         if condition {
             let jump: i8 = self.memory.read(self.register_pc) as i8;
-            let jump_addr = self
-                .register_pc
-                .wrapping_add(1)
-                .wrapping_add(jump as u16);
+            let jump_addr = self.register_pc.wrapping_add(1).wrapping_add(jump as u16);
 
             self.register_pc = jump_addr;
         }
@@ -272,23 +269,23 @@ impl CPU {
 
             AddressingMode::ZeroPageX => {
                 let index = self.memory.read(self.register_pc);
-                
+
                 index.wrapping_add(self.register_x) as u16
             }
             AddressingMode::ZeroPageY => {
                 let index = self.memory.read(self.register_pc);
-                
+
                 index.wrapping_add(self.register_y) as u16
             }
 
             AddressingMode::AbsoluteX => {
                 let base = self.memory.read_u16(self.register_pc);
-                
+
                 base.wrapping_add(self.register_x as u16)
             }
             AddressingMode::AbsoluteY => {
                 let base = self.memory.read_u16(self.register_pc);
-                
+
                 base.wrapping_add(self.register_y as u16)
             }
 
@@ -306,7 +303,7 @@ impl CPU {
                 let low = self.memory.read(base as u16);
                 let high = self.memory.read((base as u8).wrapping_add(1) as u16);
                 let deref_base = (high as u16) << 8 | (low as u16);
-                
+
                 deref_base.wrapping_add(self.register_y as u16)
             }
 
@@ -375,8 +372,10 @@ impl CPU {
             self.register_p.remove(CpuFlags::ZERO);
         }
 
-        self.register_p.set(CpuFlags::NEGATIVE, value & 0b10000000 > 0);
-        self.register_p.set(CpuFlags::OVERFLOW, value & 0b01000000 > 0);
+        self.register_p
+            .set(CpuFlags::NEGATIVE, value & 0b10000000 > 0);
+        self.register_p
+            .set(CpuFlags::OVERFLOW, value & 0b01000000 > 0);
     }
 
     pub fn bmi(&mut self) {
@@ -653,7 +652,7 @@ impl CPU {
         self.register_pc = self.stack_pop_u16();
     }
 
-    pub fn rts(&mut self){
+    pub fn rts(&mut self) {
         self.register_pc = self.stack_pop_u16() + 1;
     }
 

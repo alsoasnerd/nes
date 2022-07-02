@@ -1,10 +1,10 @@
 use nes::cpu::CPU;
 use rand::Rng;
 use sdl2::event::Event;
-use sdl2::EventPump;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
+use sdl2::EventPump;
 
 fn color(byte: u8) -> Color {
     match byte {
@@ -40,22 +40,36 @@ fn read_screen_state(cpu: &CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
 fn handle_user_input(cpu: &mut CPU, event_pump: &mut EventPump) {
     for event in event_pump.poll_iter() {
         match event {
-            Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                std::process::exit(0)
-            },
-            Event::KeyDown { keycode: Some(Keycode::W), .. } => {
+            Event::Quit { .. }
+            | Event::KeyDown {
+                keycode: Some(Keycode::Escape),
+                ..
+            } => std::process::exit(0),
+            Event::KeyDown {
+                keycode: Some(Keycode::W),
+                ..
+            } => {
                 cpu.memory.write(0xff, 0x77);
-            },
-            Event::KeyDown { keycode: Some(Keycode::S), .. } => {
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::S),
+                ..
+            } => {
                 cpu.memory.write(0xff, 0x73);
-            },
-            Event::KeyDown { keycode: Some(Keycode::A), .. } => {
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::A),
+                ..
+            } => {
                 cpu.memory.write(0xff, 0x61);
-            },
-            Event::KeyDown { keycode: Some(Keycode::D), .. } => {
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::D),
+                ..
+            } => {
                 cpu.memory.write(0xff, 0x64);
             }
-            _ => {/* do nothing */}
+            _ => { /* do nothing */ }
         }
     }
 }
@@ -67,7 +81,8 @@ fn main() {
     let window = video_subsystem
         .window("Snake game", (32.0 * 10.0) as u32, (32.0 * 10.0) as u32)
         .position_centered()
-        .build().unwrap();
+        .build()
+        .unwrap();
 
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -75,8 +90,8 @@ fn main() {
 
     let creator = canvas.texture_creator();
     let mut texture = creator
-        .create_texture_target(PixelFormatEnum::RGB24, 32, 32).unwrap();
-    
+        .create_texture_target(PixelFormatEnum::RGB24, 32, 32)
+        .unwrap();
 
     let game_code = vec![
         0x20, 0x06, 0x06, 0x20, 0x38, 0x06, 0x20, 0x0d, 0x06, 0x20, 0x2a, 0x06, 0x60, 0xa9, 0x02,
@@ -102,7 +117,6 @@ fn main() {
         0x60, 0xa6, 0xff, 0xea, 0xea, 0xca, 0xd0, 0xfb, 0x60,
     ];
 
-
     //load the game
     let mut cpu = CPU::new();
     cpu.load(game_code);
@@ -127,5 +141,4 @@ fn main() {
 
         ::std::thread::sleep(std::time::Duration::new(0, 70_000));
     });
-
 }
