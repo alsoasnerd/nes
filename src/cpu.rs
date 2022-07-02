@@ -272,24 +272,24 @@ impl CPU {
 
             AddressingMode::ZeroPageX => {
                 let index = self.memory.read(self.register_pc);
-                let address = index.wrapping_add(self.register_x) as u16;
-                address
+                
+                index.wrapping_add(self.register_x) as u16
             }
             AddressingMode::ZeroPageY => {
                 let index = self.memory.read(self.register_pc);
-                let address = index.wrapping_add(self.register_y) as u16;
-                address
+                
+                index.wrapping_add(self.register_y) as u16
             }
 
             AddressingMode::AbsoluteX => {
                 let base = self.memory.read_u16(self.register_pc);
-                let address = base.wrapping_add(self.register_x as u16);
-                address
+                
+                base.wrapping_add(self.register_x as u16)
             }
             AddressingMode::AbsoluteY => {
                 let base = self.memory.read_u16(self.register_pc);
-                let address = base.wrapping_add(self.register_y as u16);
-                address
+                
+                base.wrapping_add(self.register_y as u16)
             }
 
             AddressingMode::IndirectX => {
@@ -306,8 +306,8 @@ impl CPU {
                 let low = self.memory.read(base as u16);
                 let high = self.memory.read((base as u8).wrapping_add(1) as u16);
                 let deref_base = (high as u16) << 8 | (low as u16);
-                let deref = deref_base.wrapping_add(self.register_y as u16);
-                deref
+                
+                deref_base.wrapping_add(self.register_y as u16)
             }
 
             AddressingMode::NoneAddressing => {
@@ -335,7 +335,7 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value = value << 1;
+        value <<= 1;
         self.set_register_a(value)
     }
 
@@ -347,7 +347,7 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value = value << 1;
+        value <<= 1;
         self.memory.write(address, value);
         self.update_zero_and_negative_flags(value);
         value
@@ -500,7 +500,7 @@ impl CPU {
     }
 
     pub fn lda(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(&mode);
+        let address = self.get_operand_address(mode);
         let value = self.memory.read(address);
         self.set_register_a(value);
     }
@@ -526,7 +526,7 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value = value >> 1;
+        value >>= 1;
         self.set_register_a(value)
     }
 
@@ -538,7 +538,7 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value = value >> 1;
+        value >>= 1;
         self.memory.write(address, value);
         self.update_zero_and_negative_flags(value);
         value
@@ -558,7 +558,7 @@ impl CPU {
 
     pub fn php(&mut self) {
         //http://wiki.nesdev.com/w/index.php/CPU_status_flag_behavior
-        let mut flags = self.register_p.clone();
+        let mut flags = self.register_p;
         flags.insert(CpuFlags::BREAK);
         flags.insert(CpuFlags::UNUSED);
         self.stack_push(flags.bits());
@@ -584,9 +584,9 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value = value << 1;
+        value <<= 1;
         if old_carry {
-            value = value | 1;
+            value |= 1;
         }
         self.set_register_a(value);
     }
@@ -601,9 +601,9 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value = value << 1;
+        value <<= 1;
         if old_carry {
-            value = value | 1;
+            value |= 1;
         }
         self.memory.write(address, value);
         self.update_negative_flags(value);
@@ -619,9 +619,9 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value = value >> 1;
+        value >>= 1;
         if old_carry {
-            value = value | 0b10000000;
+            value |= 0b10000000;
         }
         self.set_register_a(value);
     }
@@ -636,9 +636,9 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value = value >> 1;
+        value >>= 1;
         if old_carry {
-            value = value | 0b10000000;
+            value |= 0b10000000;
         }
         self.memory.write(address, value);
         self.update_negative_flags(value);
@@ -658,7 +658,7 @@ impl CPU {
     }
 
     pub fn sbc(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(&mode);
+        let address = self.get_operand_address(mode);
         let value = self.memory.read(address);
         self.add_to_register_a(((value as i8).wrapping_neg().wrapping_sub(1)) as u8);
     }
