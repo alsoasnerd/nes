@@ -29,6 +29,7 @@ bitflags! {
 const STACK: u16 = 0x0100;
 const STACK_RESET: u8 = 0xfd;
 
+
 #[derive(Debug)]
 pub enum AddressingMode {
     Immediate,
@@ -239,13 +240,9 @@ impl CPU {
             let code = self.memory_read(self.register_pc);
             self.register_pc += 1;
 
-            let program_ended = assembler.interpret(self, code);
+            assembler.interpret(self, code);
 
-            if program_ended {
-                break;
-            } else {
-                callback(self)
-            }
+            callback(self);
         }
     }
 
@@ -293,8 +290,8 @@ impl CPU {
                 let low = self.memory_read(base as u16);
                 let high = self.memory_read((base as u8).wrapping_add(1) as u16);
                 let deref_base = (high as u16) << 8 | (low as u16);
-
-                deref_base.wrapping_add(self.register_y as u16)
+                let deref = deref_base.wrapping_add(self.register_y as u16);
+                deref
             }
 
             AddressingMode::NoneAddressing => {
@@ -322,7 +319,7 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value <<= 1;
+        value = value << 1;
         self.set_register_a(value)
     }
 
@@ -362,10 +359,8 @@ impl CPU {
             self.register_p.remove(CpuFlags::ZERO);
         }
 
-        self.register_p
-            .set(CpuFlags::NEGATIVE, value & 0b10000000 > 0);
-        self.register_p
-            .set(CpuFlags::OVERFLOW, value & 0b01000000 > 0);
+        self.register_p.set(CpuFlags::NEGATIVE, value & 0b10000000 > 0);
+        self.register_p.set(CpuFlags::OVERFLOW, value & 0b01000000 > 0);
     }
 
     pub fn bmi(&mut self) {
@@ -515,7 +510,7 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value >>= 1;
+        value = value >> 1;
         self.set_register_a(value)
     }
 
@@ -573,9 +568,9 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value <<= 1;
+        value = value << 1;
         if old_carry {
-            value |= 1;
+            value = value | 1;
         }
         self.set_register_a(value);
     }
@@ -590,9 +585,9 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value <<= 1;
+        value = value << 1;
         if old_carry {
-            value |= 1;
+            value = value | 1;
         }
         self.memory_write(address, value);
         self.update_negative_flags(value);
@@ -608,9 +603,9 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value >>= 1;
+        value = value >> 1;
         if old_carry {
-            value |= 0b10000000;
+            value = value | 0b10000000;
         }
         self.set_register_a(value);
     }
@@ -625,9 +620,9 @@ impl CPU {
         } else {
             self.clear_carry_flag();
         }
-        value >>= 1;
+        value = value >> 1;
         if old_carry {
-            value |= 0b10000000;
+            value = value | 0b10000000;
         }
         self.memory_write(address, value);
         self.update_negative_flags(value);
@@ -642,7 +637,7 @@ impl CPU {
         self.register_pc = self.stack_pop_u16();
     }
 
-    pub fn rts(&mut self) {
+    pub fn rts(&mut self){
         self.register_pc = self.stack_pop_u16() + 1;
     }
 
