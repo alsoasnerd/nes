@@ -1,4 +1,4 @@
-use crate::{opcodes::OpCode, assembly::Assembler};
+use crate::{opcodes::OpCode, assembly::Assembler, bus::BUS};
 use bitflags::bitflags;
 
 bitflags! {
