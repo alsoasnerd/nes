@@ -3,7 +3,7 @@ use crate::opcodes;
 use std::collections::HashMap;
 
 pub struct Assembler {
-    opcodes: HashMap<u8, &'static opcodes::OpCode>,
+    opcodes: HashMap<u8, &'static opcodes::OpCode>
 }
 
 impl Assembler {
@@ -13,7 +13,7 @@ impl Assembler {
         }
     }
 
-    pub fn interpret(&self, cpu: &mut CPU, code: u8) -> bool {
+    pub fn interpret(&self, cpu: &mut CPU, code: u8) {
         let pc_state = cpu.register_pc;
         let opcode = self.opcodes.get(&code).unwrap();
 
@@ -52,7 +52,7 @@ impl Assembler {
 
             /* BPL */ 0x10 => cpu.bpl(),
 
-            /* BRK */ 0x00 => return true,
+            /* BRK */ 0x00 => return,
 
             /* BVC */ 0x50 => cpu.bvc(),
 
@@ -207,6 +207,5 @@ impl Assembler {
         }
 
         cpu.update_pc(opcode, pc_state);
-        false
     }
 }
