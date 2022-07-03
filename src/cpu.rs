@@ -240,9 +240,13 @@ impl CPU {
             let code = self.memory_read(self.register_pc);
             self.register_pc += 1;
 
-            assembler.interpret(self, code);
+            let program_ends = assembler.interpret(self, code);
 
-            callback(self);
+            if program_ends {
+                break;
+            } else {
+                callback(self);
+            }
         }
     }
 
