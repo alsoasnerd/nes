@@ -52,7 +52,7 @@ impl BUS {
 
     pub fn memory_read_u16(&self, address: u16) -> u16 {
         let low = self.memory_read(address) as u16;
-        let high = self.memoryread(address + 1) as u16;
+        let high = self.memory_read(address + 1) as u16;
 
         (high << 8) | (low as u16)
     }
