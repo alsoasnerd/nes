@@ -109,6 +109,7 @@ fn main() {
     let mut cpu = CPU::new(bus);
     cpu.load(game_code);
     cpu.reset();
+    cpu.register_pc = 0x0600;
 
     let mut screen_state = [0 as u8; 32 * 3 * 32];
     let mut rng = rand::thread_rng();
