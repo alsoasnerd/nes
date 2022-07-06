@@ -1,7 +1,6 @@
 use crate::ram::RAM;
 use crate::cartridges::ROM;
 
-
 const RAM: u16 = 0x0000;
 const RAM_END: u16 = 0x1FFF;
 const PPU_REGISTERS: u16 = 0x2000;
