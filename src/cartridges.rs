@@ -4,9 +4,9 @@ const CHR_ROM_PAGE_SIZE: usize = 8192;
 
 #[derive(Debug, PartialEq)]
 pub enum Mirroring {
-    VERTICAL,
-    HORIZONTAL,
-    FOUR_SCREEN
+    Vertical,
+    Horizontal,
+    FourScreen
 }
 
 pub struct ROM {
@@ -33,9 +33,9 @@ impl ROM {
         let four_screen = binary_data[6] & 0b1000 != 0;
         let vertical_mirroring = binary_data[6] & 0b1 != 0;
         let screen_mirroring = match (four_screen, vertical_mirroring) {
-            (true, _) => Mirroring::FOUR_SCREEN,
-            (false, true) => Mirroring::VERTICAL,
-            (false, false) => Mirroring::HORIZONTAL,
+            (true, _) => Mirroring::FourScreen,
+            (false, true) => Mirroring::Vertical,
+            (false, false) => Mirroring::Horizontal,
         };
 
         let prg_rom_size = binary_data[4] as usize * PRG_ROM_PAGE_SIZE;
