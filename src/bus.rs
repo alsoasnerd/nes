@@ -1,4 +1,6 @@
 use crate::ram::RAM;
+use crate::cartridges::ROM;
+
 
 const RAM: u16 = 0x0000;
 const RAM_END: u16 = 0x1FFF;
@@ -6,13 +8,15 @@ const PPU_REGISTERS: u16 = 0x2000;
 const PPU_REGISTERS_END: u16 = 0x3FFF;
 
 pub struct BUS {
-    ram: RAM
+    ram: RAM,
+    rom: ROM,
 }
 
 impl BUS {
-    pub fn new() -> Self {
+    pub fn new(rom: ROM) -> Self {
         Self {
-            ram: RAM::new()
+            ram: RAM::new(),
+            rom
         }
     }
 
@@ -27,6 +31,9 @@ impl BUS {
                 let _adjusted_address = address & 0b00100000_00000111;
                 todo!("PPU is not supported yet")
             }
+
+            0x8000..=0xFFFF => self.read_prg_rom(address),
+
             _ => {
                 println!("Ignoring memory access at {}", address);
                 0
@@ -40,10 +47,16 @@ impl BUS {
                 let adjusted_address = address & 0b11111111111;
                 self.ram.write(adjusted_address, data);
             }
+
             PPU_REGISTERS ..= PPU_REGISTERS_END => {
                 let _adjusted_address = address & 0b00100000_00000111;
                 todo!("PPU is not supported yet");
             }
+
+            0x8000..=0xFFFF => {
+                panic!("Attempt to write to Cartridge ROM space")
+            }
+
             _ => {
                 println!("Ignoring memory write-access at {}", address);
             }
@@ -63,5 +76,15 @@ impl BUS {
 
         self.memory_write(address, low);
         self.memory_write(address + 1, high);
+    }
+
+    pub fn read_prg_rom(&self, mut address: u16) -> u8 {
+        address -= 0x8000;
+
+        if self.rom.prg_rom.len() == 0x4000 && address >= 0x4000 {
+            address %= 0x4000;
+        }
+
+        self.rom.prg_rom[address as usize]
     }
 }
