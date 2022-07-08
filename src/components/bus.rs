@@ -1,5 +1,5 @@
-use crate::ram::RAM;
-use crate::cartridges::ROM;
+use super::ram::RAM;
+use super::cartridges::ROM;
 
 const RAM: u16 = 0x0000;
 const RAM_END: u16 = 0x1FFF;

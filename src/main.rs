@@ -1,6 +1,6 @@
-use nes::cartridges::ROM;
-use nes::cpu::CPU;
-use nes::bus::BUS;
+use nes::components::cartridges::ROM;
+use nes::components::cpu::CPU;
+use nes::components::bus::BUS;
 use rand::Rng;
 use sdl2::event::Event;
 use sdl2::EventPump;

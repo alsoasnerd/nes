@@ -1,5 +1,5 @@
-use crate::cpu::CPU;
-use crate::opcodes;
+use super::cpu::CPU;
+use super::opcodes;
 use std::collections::HashMap;
 
 pub struct Assembler {

@@ -1,4 +1,4 @@
-use crate::cpu::AddressingMode;
+use super::cpu::AddressingMode;
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
