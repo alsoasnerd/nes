@@ -1,4 +1,5 @@
-use super::{opcodes::OpCode, assembly::Assembler, bus::BUS};
+use super::assembly::{ Assembler, OpCode };
+use super::bus::BUS;
 use bitflags::bitflags;
 
 bitflags! {
