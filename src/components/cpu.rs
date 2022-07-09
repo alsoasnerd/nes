@@ -251,38 +251,36 @@ impl CPU {
         }
     }
 
-    pub fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
+    pub fn get_absolute_address(&self, mode: &AddressingMode, address: u16) -> u16 {
         match mode {
-            AddressingMode::Immediate => self.register_pc,
+            AddressingMode::ZeroPage => self.memory_read(address) as u16,
 
-            AddressingMode::ZeroPage => self.memory_read(self.register_pc) as u16,
-
-            AddressingMode::Absolute => self.memory_read_u16(self.register_pc),
+            AddressingMode::Absolute => self.memory_read_u16(address),
 
             AddressingMode::ZeroPageX => {
-                let address = self.memory_read(self.register_pc);
+                let address = self.memory_read(address);
                 let address = address.wrapping_add(self.register_x) as u16;
                 address
             }
             AddressingMode::ZeroPageY => {
-                let address = self.memory_read(self.register_pc);
+                let address = self.memory_read(address);
                 let address = address.wrapping_add(self.register_y) as u16;
                 address
             }
 
             AddressingMode::AbsoluteX => {
-                let base = self.memory_read_u16(self.register_pc);
+                let base = self.memory_read_u16(address);
                 let address = base.wrapping_add(self.register_x as u16);
                 address
             }
             AddressingMode::AbsoluteY => {
-                let base = self.memory_read_u16(self.register_pc);
+                let base = self.memory_read_u16(address);
                 let address = base.wrapping_add(self.register_y as u16);
                 address
             }
 
             AddressingMode::IndirectX => {
-                let base = self.memory_read(self.register_pc);
+                let base = self.memory_read(address);
 
                 let ptr: u8 = (base as u8).wrapping_add(self.register_x);
                 let low = self.memory_read(ptr as u16);
@@ -290,7 +288,7 @@ impl CPU {
                 (high as u16) << 8 | (low as u16)
             }
             AddressingMode::IndirectY => {
-                let base = self.memory_read(self.register_pc);
+                let base = self.memory_read(address);
 
                 let low = self.memory_read(base as u16);
                 let high = self.memory_read((base as u8).wrapping_add(1) as u16);
@@ -299,9 +297,16 @@ impl CPU {
                 deref
             }
 
-            AddressingMode::NoneAddressing => {
+            _ => {
                 panic!("mode {:?} is not supported", mode);
             }
+        }
+    }
+
+    fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
+        match mode {
+            AddressingMode::Immediate => self.register_pc,
+            _ => self.get_absolute_address(mode, self.register_pc)
         }
     }
 
