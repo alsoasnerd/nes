@@ -3,7 +3,7 @@ use super::opcodes;
 use std::collections::HashMap;
 
 pub struct Assembler {
-    opcodes: HashMap<u8, &'static opcodes::OpCode>
+    pub opcodes: HashMap<u8, &'static opcodes::OpCode>
 }
 
 impl Assembler {
