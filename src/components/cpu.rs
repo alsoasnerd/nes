@@ -712,4 +712,20 @@ impl CPU {
         self.register_a = self.register_y;
         self.update_zero_and_negative_flags(self.register_a);
     }
+
+    // unofficial opcodes
+
+    pub fn dcp(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let mut value = self.memory_read(address);
+
+        value = value.wrapping_sub(value);
+
+        self.memory_write(address, value);
+        if value <= self.register_a {
+            self.register_p.insert(CpuFlags::CARRY);
+        }
+
+        self.update_zero_and_negative_flags(value.wrapping_sub(value));
+    }
 }
