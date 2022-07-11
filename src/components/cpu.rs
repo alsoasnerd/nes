@@ -1,4 +1,4 @@
-use super::assembly::{ Assembler, OpCode };
+use super::assembly::{Assembler, OpCode};
 use super::bus::BUS;
 use bitflags::bitflags;
 
@@ -30,7 +30,6 @@ bitflags! {
 const STACK: u16 = 0x0100;
 const STACK_RESET: u8 = 0xfd;
 
-
 #[derive(Debug)]
 pub enum AddressingMode {
     Immediate,
@@ -52,7 +51,7 @@ pub struct CPU {
     pub register_p: CpuFlags,
     pub register_pc: u16,
     pub register_sp: u8,
-    bus: BUS
+    bus: BUS,
 }
 
 impl CPU {
@@ -64,7 +63,7 @@ impl CPU {
             register_sp: STACK_RESET,
             register_pc: 0,
             register_p: CpuFlags::from_bits_truncate(0b0010_0100),
-            bus
+            bus,
         }
     }
 
@@ -87,6 +86,10 @@ impl CPU {
     pub fn set_register_a(&mut self, value: u8) {
         self.register_a = value;
         self.update_zero_and_negative_flags(self.register_a);
+    }
+
+    fn sub_from_register_a(&mut self, value: u8) {
+        self.add_to_register_a(((value as i8).wrapping_neg().wrapping_sub(1)) as u8);
     }
 
     pub fn update_zero_and_negative_flags(&mut self, result: u8) {
@@ -212,10 +215,7 @@ impl CPU {
     pub fn branch(&mut self, condition: bool) {
         if condition {
             let jump: i8 = self.memory_read(self.register_pc) as i8;
-            let jump_addr = self
-                .register_pc
-                .wrapping_add(1)
-                .wrapping_add(jump as u16);
+            let jump_addr = self.register_pc.wrapping_add(1).wrapping_add(jump as u16);
 
             self.register_pc = jump_addr;
         }
@@ -306,7 +306,7 @@ impl CPU {
     fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
         match mode {
             AddressingMode::Immediate => self.register_pc,
-            _ => self.get_absolute_address(mode, self.register_pc)
+            _ => self.get_absolute_address(mode, self.register_pc),
         }
     }
 
@@ -369,8 +369,10 @@ impl CPU {
             self.register_p.remove(CpuFlags::ZERO);
         }
 
-        self.register_p.set(CpuFlags::NEGATIVE, value & 0b10000000 > 0);
-        self.register_p.set(CpuFlags::OVERFLOW, value & 0b01000000 > 0);
+        self.register_p
+            .set(CpuFlags::NEGATIVE, value & 0b10000000 > 0);
+        self.register_p
+            .set(CpuFlags::OVERFLOW, value & 0b01000000 > 0);
     }
 
     pub fn bmi(&mut self) {
@@ -647,7 +649,7 @@ impl CPU {
         self.register_pc = self.stack_pop_u16();
     }
 
-    pub fn rts(&mut self){
+    pub fn rts(&mut self) {
         self.register_pc = self.stack_pop_u16() + 1;
     }
 
@@ -760,5 +762,51 @@ impl CPU {
         self.update_zero_and_negative_flags(result);
 
         self.register_x = result;
+    }
+
+    pub fn arr(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memory_read(address);
+
+        self.set_register_a(value & self.register_a);
+        self.ror_accumulator();
+
+        let result = self.register_a;
+        let bit_5 = (result >> 5) & 1;
+        let bit_6 = (result >> 6) & 1;
+
+        if bit_6 == 1 {
+            self.register_p.insert(CpuFlags::CARRY)
+        } else {
+            self.register_p.remove(CpuFlags::CARRY)
+        }
+
+        if bit_5 ^ bit_6 == 1 {
+            self.register_p.insert(CpuFlags::OVERFLOW);
+        } else {
+            self.register_p.remove(CpuFlags::OVERFLOW);
+        }
+
+        self.update_zero_and_negative_flags(result);
+    }
+
+    pub fn unofficial_sbc(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memory_read(address);
+
+        self.sub_from_register_a(value);
+    }
+
+    pub fn anc(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memory_read(address);
+
+        self.set_register_a(value & self.register_a);
+
+        if self.register_p.contains(CpuFlags::NEGATIVE) {
+            self.register_p.insert(CpuFlags::CARRY);
+        } else {
+            self.register_p.remove(CpuFlags::CARRY);
+        }
     }
 }
