@@ -728,4 +728,37 @@ impl CPU {
 
         self.update_zero_and_negative_flags(value.wrapping_sub(value));
     }
+
+    pub fn rla(&mut self, mode: &AddressingMode) {
+        let value = self.rol(mode);
+        self.set_register_a(value & self.register_a);
+    }
+
+    pub fn slo(&mut self, mode: &AddressingMode) {
+        let value = self.asl(mode);
+        self.set_register_a(value | self.register_a);
+    }
+
+    pub fn sre(&mut self, mode: &AddressingMode) {
+        let value = self.lsr(mode);
+        self.set_register_a(value ^ self.register_a);
+    }
+
+    // skb is a 2 byte NOP immediate
+
+    pub fn axs(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memory_read(address);
+
+        let x_and_a = self.register_x & self.register_a;
+        let result = x_and_a.wrapping_sub(value);
+
+        if value <= x_and_a {
+            self.register_p.insert(CpuFlags::CARRY);
+        }
+
+        self.update_zero_and_negative_flags(result);
+
+        self.register_x = result;
+    }
 }
