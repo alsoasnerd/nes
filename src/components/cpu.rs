@@ -835,5 +835,34 @@ impl CPU {
         self.sub_from_register_a(value);
     }
 
-    
+    // all unofficial NOP'S are just {} in assembly code
+
+    pub fn lax(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memory_read(address);
+        self.set_register_a(value);
+        self.register_x = self.register_a;
+    }
+
+    pub fn sax(&mut self, mode: &AddressingMode) {
+        let value = self.register_a & self.register_x;
+        let address = self.get_operand_address(mode);
+
+        self.memory_write(address, value);
+    }
+
+    pub fn lxa(&mut self, mode: &AddressingMode) {
+        self.lda(mode);
+        self.tax();
+    }
+
+    pub fn xaa(&mut self, mode: &AddressingMode) {
+        self.register_a = self.register_x;
+        self.update_zero_and_negative_flags(self.register_a);
+
+        let address = self.get_operand_address(mode);
+        let value = self.memory_read(address);
+
+        self.set_register_a(value & self.register_a);
+    }
 }
