@@ -809,4 +809,31 @@ impl CPU {
             self.register_p.remove(CpuFlags::CARRY);
         }
     }
+
+    pub fn alr(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let value = self.memory_read(address);
+
+        self.set_register_a(value & self.register_a);
+        self.lsr_accumulator();
+    }
+
+    pub fn nop_read(&self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let _value = self.memory_read(address);
+
+        // do nothing
+    }
+
+    pub fn rra(&mut self, mode: &AddressingMode) {
+        let value = self.ror(mode);
+        self.add_to_register_a(value);
+    }
+
+    pub fn isb(&mut self, mode: &AddressingMode) {
+        let value = self.inc(mode);
+        self.sub_from_register_a(value);
+    }
+
+    
 }
