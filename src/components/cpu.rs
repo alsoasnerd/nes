@@ -865,4 +865,44 @@ impl CPU {
 
         self.set_register_a(value & self.register_a);
     }
+
+    pub fn las(&mut self, mode: &AddressingMode) {
+        let address = self.get_operand_address(mode);
+        let mut value = self.memory_read(address);
+
+        value &= self.register_sp;
+
+        self.register_a = value;
+        self.register_x = value;
+        self.register_sp = value;
+
+        self.update_zero_and_negative_flags(value);
+    }
+
+    pub fn tas(&mut self) {
+        let x_and_a = self.register_x & self.register_a;
+        self.register_sp = x_and_a;
+
+        let address = self.memory_read_u16(self.register_pc);
+        let address = address + self.register_y as u16;
+
+        let high_plus_1 = (address >> 8) as u8 + 1;
+
+        let value = high_plus_1 & self.register_sp;
+
+        self.memory_write(address, value);
+    }
+
+    pub fn axa_indirect(&mut self) {
+        let position = self.memory_read(self.register_pc);
+        let address = self.memory_read_u16(position as u16);
+
+        let address = address + self.register_y as u16;
+        let x_and_a = self.register_x & self.register_a;
+
+        let high = (address >> 8) as u8;
+        let value = x_and_a & high;
+
+        self.memory_write(address, value);
+    }
 }
