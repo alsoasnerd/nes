@@ -905,4 +905,25 @@ impl CPU {
 
         self.memory_write(address, value);
     }
+
+    pub fn axa_absolute(&mut self) {
+        let address = self.memory_read_u16(self.register_pc);
+        let address = address + self.register_y as u16;
+
+        let x_and_a = self.register_x & self.register_a;
+        let high = (address >> 8) as u8;
+
+        let value = x_and_a & high;
+        self.memory_write(address, value);
+    }
+
+    pub fn sxa(&mut self) {
+        let address = self.memory_read_u16(self.register_pc);
+        let address = address + self.register_y as u16;
+
+        let high_plus_1 = (address >> 8) as u8 + 1;
+        let value = self.register_x & high_plus_1;
+
+        self.memory_write(address, value);
+    }
 }
