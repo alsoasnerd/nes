@@ -1,7 +1,7 @@
-use super::cpu::CPU;
 use super::cpu::AddressingMode;
-use std::collections::HashMap;
+use super::cpu::CPU;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
 
 pub struct OpCode {
     pub code: u8,
@@ -362,9 +362,8 @@ lazy_static! {
     };
 }
 
-
 pub struct Assembler {
-    pub opcodes: HashMap<u8, &'static OpCode>
+    pub opcodes: HashMap<u8, &'static OpCode>,
 }
 
 impl Assembler {
@@ -376,7 +375,10 @@ impl Assembler {
 
     pub fn interpret(&self, cpu: &mut CPU, code: u8) -> bool {
         let pc_state = cpu.register_pc;
-        let opcode = self.opcodes.get(&code).expect(&format!("OpCode {:x} is not recognized", code));
+        let opcode = self
+            .opcodes
+            .get(&code)
+            .expect(&format!("OpCode {:x} is not recognized", code));
 
         match code {
             /* ADC */
@@ -564,7 +566,103 @@ impl Assembler {
 
             /* TYA */ 0x98 => cpu.tya(),
 
-            _ => todo!(),
+            /* unofficial */
+
+            /* DCP */
+            0xc7 | 0xd7 | 0xCF | 0xdF | 0xdb | 0xd3 | 0xc3 => {
+                cpu.dcp(&opcode.mode);
+            }
+
+            /* RLA */
+            0x27 | 0x37 | 0x2F | 0x3F | 0x3b | 0x33 | 0x23 => {
+                cpu.rla(&opcode.mode);
+            }
+
+            /* SLO */
+            0x07 | 0x17 | 0x0F | 0x1f | 0x1b | 0x03 | 0x13 => {
+                cpu.slo(&opcode.mode);
+            }
+
+            /* SRE */
+            0x47 | 0x57 | 0x4F | 0x5f | 0x5b | 0x43 | 0x53 => {
+                cpu.sre(&opcode.mode);
+            }
+
+            /* SKB */
+            0x80 | 0x82 | 0x89 | 0xc2 | 0xe2 => {
+                // do nothing
+            }
+
+            /* AXS */
+            0xCB => cpu.axs(&opcode.mode),
+
+            /* ARR */
+            0x6B => cpu.arr(&opcode.mode),
+
+            /* unofficial SBC */
+            0xeb => cpu.unofficial_sbc(&opcode.mode),
+
+            /* ANC */
+            0x0b | 0x2b => {
+                cpu.anc(&opcode.mode);
+            }
+
+            /* ALR */
+            0x4b => cpu.alr(&opcode.mode),
+
+            /* NOP read */
+            0x04 | 0x44 | 0x64 | 0x14 | 0x34 | 0x54 | 0x74 | 0xd4 | 0xf4 | 0x0c | 0x1c | 0x3c
+            | 0x5c | 0x7c | 0xdc | 0xfc => {
+                cpu.nop_read(&opcode.mode);
+            }
+
+            /* RRA */
+            0x67 | 0x77 | 0x6f | 0x7f | 0x7b | 0x63 | 0x73 => {
+                cpu.rra(&opcode.mode);
+            }
+
+            /* ISB */
+            0xe7 | 0xf7 | 0xef | 0xff | 0xfb | 0xe3 | 0xf3 => {
+                cpu.isb(&opcode.mode);
+            }
+
+            /* NOPs */
+            0x02 | 0x12 | 0x22 | 0x32 | 0x42 | 0x52 | 0x62 | 0x72 | 0x92 | 0xb2 | 0xd2 | 0xf2 | 0x1a | 0x3a | 0x5a | 0x7a
+            | 0xda | 0xfa => {}
+
+            /* LAX */
+            0xa7 | 0xb7 | 0xaf | 0xbf | 0xa3 | 0xb3 => {
+                cpu.lax(&opcode.mode);
+            }
+
+            /* SAX */
+            0x87 | 0x97 | 0x8f | 0x83 => {
+                cpu.sax(&opcode.mode);
+            }
+
+            /* LXA */
+            0xab => cpu.lxa(&opcode.mode),
+
+            /* XAA */
+            0x8b => cpu.xaa(&opcode.mode),
+
+            /* LAS */
+            0xbb => cpu.las(&opcode.mode),
+
+            /* TAS */
+            0x9b => cpu.tas(),
+
+            /* AXA Indirect Y */
+            0x93 => cpu.axa_indirect(),
+
+            /* AXA Absolute Y*/
+            0x9f => cpu.axa_absolute(),
+
+            /* SXA */
+            0x9e => cpu.sxa(),
+
+            /* SYA */
+            0x9c => cpu.sya()
         }
 
         cpu.update_pc(opcode, pc_state);
