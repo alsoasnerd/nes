@@ -116,6 +116,7 @@ pub struct PPU {
     pub oam_data: [u8; 256],
     pub mirroring: Mirroring,
     address: AddressRegister,
+    control: ControlRegister
 }
 
 impl PPU {
@@ -127,10 +128,15 @@ impl PPU {
             oam_data: [0; 64 * 4],
             mirroring,
             address: AddressRegister::new(),
+            control: ControlRegister::new()
         }
     }
 
     fn write_in_ppu_address(&mut self, value: u8) {
         self.address.update(value);
+    }
+
+    fn write_in_control(&mut self, value: u8) {
+        self.control.update(value);
     }
 }
