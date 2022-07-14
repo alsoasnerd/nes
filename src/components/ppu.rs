@@ -1,3 +1,5 @@
+use super::cartridges::Mirroring;
+
 pub struct AddressRegister {
     low: u8,
     high: u8,
@@ -54,5 +56,31 @@ impl AddressRegister {
 
     pub fn reset_latch(&mut self) {
         self.high_pointer = true;
+    }
+}
+
+pub struct PPU {
+    pub chr_rom: Vec<u8>,
+    pub pallete_table: [u8; 32],
+    pub vram: [u8; 2048],
+    pub oam_data: [u8; 256],
+    pub mirroring: Mirroring,
+    address: AddressRegister
+}
+
+impl PPU {
+    pub fn new(chr_rom: Vec<u8>, mirroring: Mirroring) -> Self {
+        Self {
+            chr_rom,
+            pallete_table: [0; 32],
+            vram: [0; 2048],
+            oam_data: [0; 64 * 4],
+            mirroring,
+            address: AddressRegister::new()
+        }
+    }
+
+    fn write_in_ppu_address(&mut self, value: u8) {
+        self.address.update(value);
     }
 }
