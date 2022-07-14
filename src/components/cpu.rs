@@ -926,4 +926,14 @@ impl CPU {
 
         self.memory_write(address, value);
     }
+
+    pub fn sya(&mut self) {
+        let address = self.memory_read_u16(self.register_pc);
+        let address = address + self.register_x as u16;
+
+        let high_plus_1 = (address >> 8) as u8 + 1;
+        let value = self.register_x & high_plus_1;
+
+        self.memory_write(address, value);
+    }
 }
