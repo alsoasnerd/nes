@@ -183,4 +183,26 @@ impl PPU {
             _ => panic!("Read unexpected address: 0x{:02x}", address),
         }
     }
+
+    pub fn write_in_data(&mut self, data: u8) {
+        let address = self.address.get();
+
+        match address {
+            0..=0x1FFF => println!("Attempt to write to chr_rom space: 0x{:02x}", address),
+            0x2000..=0x2FFF => self.vram[self.mirror_vram_address(address) as usize] = data,
+            0x3000..=0x3EFF => unimplemented!("Address {} should't be used in reallity", address),
+
+            0x3F10 | 0x3F14 | 0x3F18 | 0x3F1C => {
+                let add_mirror = address - 0x10;
+                self.pallete_table[(add_mirror - 0x3F00) as usize] = data;
+            }
+
+            0x3f00..=0x3fff => {
+                self.pallete_table[(address - 0x3f00) as usize] = data;
+            }
+
+            _ => panic!("Unexpected access to mirrored space {}", address),
+        }
+            self.increment_vram_address();
+    }
 }
