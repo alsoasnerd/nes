@@ -116,7 +116,8 @@ pub struct PPU {
     pub oam_data: [u8; 256],
     pub mirroring: Mirroring,
     address: AddressRegister,
-    control: ControlRegister
+    control: ControlRegister,
+    internal_data_buffer: u8,
 }
 
 impl PPU {
@@ -128,7 +129,8 @@ impl PPU {
             oam_data: [0; 64 * 4],
             mirroring,
             address: AddressRegister::new(),
-            control: ControlRegister::new()
+            control: ControlRegister::new(),
+            internal_data_buffer: 0,
         }
     }
 
@@ -141,7 +143,22 @@ impl PPU {
     }
 
     fn increment_vram_address(&mut self) {
-        self.address.increment(self.control.vram_address_increment());
+        self.address
+            .increment(self.control.vram_address_increment());
+    }
+
+    fn mirror_vram_address(&self, address: u16) -> u16 {
+        let mirrored_address = address & 0b10111111111111;
+        let vram_index = mirrored_address - 0x2000;
+        let name_table = vram_index / 0x400;
+
+        match (&self.mirroring, name_table) {
+            (Mirroring::Vertical, 2) | (Mirroring::Vertical, 3) => vram_index - 0x800,
+            (Mirroring::Horizontal, 2) => vram_index - 0x400,
+            (Mirroring::Horizontal, 1) => vram_index - 0x400,
+            (Mirroring::Horizontal, 3) => vram_index - 0x800,
+            _ => vram_index,
+        }
     }
 
     fn read_data(&mut self) -> u8 {
@@ -149,8 +166,17 @@ impl PPU {
         self.increment_vram_address();
 
         match address {
-            0..=0x1fff => todo!("Read from chr_rom: 0x{:02x}", address),
-            0x2000..=0x2fff => todo!("Read from RAM: 0x{:02x}", address),
+            0..=0x1fff => {
+                let result = self.internal_data_buffer;
+                self.internal_data_buffer = self.chr_rom[address as usize];
+                result
+            }
+
+            0x2000..=0x2fff => {
+                let result = self.internal_data_buffer;
+                self.internal_data_buffer = self.vram[self.mirror_vram_address(address) as usize]
+            }
+
             0x3000..=0x3eff => panic!("Read unexpected address: 0x{:02x}", address),
             0x3f00..=0x3fff => self.pallete_table[(address - 0x3f00) as usize],
             _ => panic!("Read unexpected address: 0x{:02x}", address),
