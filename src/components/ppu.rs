@@ -174,7 +174,8 @@ impl PPU {
 
             0x2000..=0x2fff => {
                 let result = self.internal_data_buffer;
-                self.internal_data_buffer = self.vram[self.mirror_vram_address(address) as usize]
+                self.internal_data_buffer = self.vram[self.mirror_vram_address(address) as usize];
+                result
             }
 
             0x3000..=0x3eff => panic!("Read unexpected address: 0x{:02x}", address),
