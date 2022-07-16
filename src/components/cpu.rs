@@ -67,7 +67,7 @@ impl CPU {
         }
     }
 
-    pub fn memory_read(&self, address: u16) -> u8 {
+    pub fn memory_read(&mut self, address: u16) -> u8 {
         self.bus.memory_read(address)
     }
 
@@ -75,7 +75,7 @@ impl CPU {
         self.bus.memory_write(address, value);
     }
 
-    pub fn memory_read_u16(&self, address: u16) -> u16 {
+    pub fn memory_read_u16(&mut self, address: u16) -> u16 {
         self.bus.memory_read_u16(address)
     }
 
@@ -251,7 +251,7 @@ impl CPU {
         }
     }
 
-    pub fn get_absolute_address(&self, mode: &AddressingMode, address: u16) -> u16 {
+    pub fn get_absolute_address(&mut self, mode: &AddressingMode, address: u16) -> u16 {
         match mode {
             AddressingMode::ZeroPage => self.memory_read(address) as u16,
 
@@ -303,7 +303,7 @@ impl CPU {
         }
     }
 
-    fn get_operand_address(&self, mode: &AddressingMode) -> u16 {
+    fn get_operand_address(&mut self, mode: &AddressingMode) -> u16 {
         match mode {
             AddressingMode::Immediate => self.register_pc,
             _ => self.get_absolute_address(mode, self.register_pc),
@@ -818,7 +818,7 @@ impl CPU {
         self.lsr_accumulator();
     }
 
-    pub fn nop_read(&self, mode: &AddressingMode) {
+    pub fn nop_read(&mut self, mode: &AddressingMode) {
         let address = self.get_operand_address(mode);
         let _value = self.memory_read(address);
 

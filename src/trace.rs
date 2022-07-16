@@ -2,7 +2,7 @@ use crate::components::cpu::AddressingMode;
 use crate::components::cpu::CPU;
 use crate::components::assembly::Assembler;
 
-pub fn trace(cpu: &CPU) -> String {
+pub fn trace(cpu: &mut CPU) -> String {
     let assembler = Assembler::new();
 
     let code = cpu.memory_read(cpu.register_pc);

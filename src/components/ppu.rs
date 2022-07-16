@@ -134,11 +134,11 @@ impl PPU {
         }
     }
 
-    fn write_in_ppu_address(&mut self, value: u8) {
+    pub fn write_in_ppu_address(&mut self, value: u8) {
         self.address.update(value);
     }
 
-    fn write_in_control(&mut self, value: u8) {
+    pub fn write_in_control(&mut self, value: u8) {
         self.control.update(value);
     }
 
@@ -161,7 +161,7 @@ impl PPU {
         }
     }
 
-    fn read_data(&mut self) -> u8 {
+    pub fn read_data(&mut self) -> u8 {
         let address = self.address.get();
         self.increment_vram_address();
 
