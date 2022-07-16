@@ -139,4 +139,21 @@ impl PPU {
     fn write_in_control(&mut self, value: u8) {
         self.control.update(value);
     }
+
+    fn increment_vram_address(&mut self) {
+        self.address.increment(self.control.vram_address_increment());
+    }
+
+    fn read_data(&mut self) -> u8 {
+        let address = self.address.get();
+        self.increment_vram_address();
+
+        match address {
+            0..=0x1fff => todo!("Read from chr_rom: 0x{:02x}", address),
+            0x2000..=0x2fff => todo!("Read from RAM: 0x{:02x}", address),
+            0x3000..=0x3eff => panic!("Read unexpected address: 0x{:02x}", address),
+            0x3f00..=0x3fff => self.pallete_table[(address - 0x3f00) as usize],
+            _ => panic!("Read unexpected address: 0x{:02x}", address),
+        }
+    }
 }
