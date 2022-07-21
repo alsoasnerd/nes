@@ -229,6 +229,19 @@ impl CPU {
         }
     }
 
+    fn interrupt_nmi(&mut self) {
+        self.stack_push_u16(self.register_pc);
+        let mut flag = self.register_p.clone();
+        flag.set(CpuFlags::BREAK, false);
+        flag.set(CpuFlags::UNUSED, true);
+
+        self.stack_push(flag.bits);
+        self.register_p.insert(CpuFlags::INTERRUPT_DISABLE);
+
+        self.bus.tick(2);
+        self.register_pc = self.memory_read_u16(0xFFFA);
+    }
+
     pub fn run(&mut self) {
         self.run_with_callback(|_| {});
     }
