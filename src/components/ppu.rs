@@ -174,6 +174,7 @@ pub struct PPU {
     internal_data_buffer: u8,
     scanline: u16,
     cycles: usize,
+    nmi_interrupt: Option<u8>
 }
 
 impl PPU {
@@ -189,7 +190,8 @@ impl PPU {
             status: StatusRegister::new(),
             internal_data_buffer: 0,
             scanline: 0,
-            cycles: 0
+            cycles: 0,
+            nmi_interrupt: None
         }
     }
 
@@ -276,18 +278,23 @@ impl PPU {
         self.scanline += 1;
 
         if self.scanline == 241 {
+            self.status.set_vblank_status(true);
             if self.control.generate_vblank_nmi() {
-                self.status.set_vblank_status(true);
-                todo!("Should trigger NMI Interrupt")
+                self.nmi_interrupt = Some(1);
             }
         }
 
         if self.scanline >= 262 {
             self.scanline = 0;
+            self.nmi_interrupt = None;
             self.status.reset_vblank_status();
             return true;
         }
 
         return false;
+    }
+
+    pub fn pool_nmi_status(&mut self) -> Option<u8> {
+        self.nmi_interrupt.take()
     }
 }

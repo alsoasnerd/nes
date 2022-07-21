@@ -112,6 +112,6 @@ impl BUS {
     }
 
     pub fn pool_nmi_status(&mut self) -> Option<u8> {
-        self.ppu.interrupt_nmi.take()
+        self.ppu.pool_nmi_status()
     }
 }
