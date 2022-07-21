@@ -10,7 +10,8 @@ const PPU_REGISTERS_END: u16 = 0x3FFF;
 pub struct BUS {
     ram: RAM,
     prg_rom: Vec<u8>,
-    ppu: PPU
+    ppu: PPU,
+    cycles: usize
 }
 
 impl BUS {
@@ -21,6 +22,7 @@ impl BUS {
             ram: RAM::new(),
             prg_rom: rom.prg_rom,
             ppu,
+            cycles: 0
         }
     }
 
@@ -102,5 +104,10 @@ impl BUS {
         }
 
         self.prg_rom[address as usize]
+    }
+
+    pub fn tick(&mut self, cycles: u8) {
+        self.cycles += cycles as usize;
+        self.ppu.tick(cycles * 3);
     }
 }
