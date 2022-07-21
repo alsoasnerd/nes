@@ -160,6 +160,10 @@ impl StatusRegister {
     fn reset_vblank_status(&mut self) {
         self.remove(StatusRegister::VBLANK_STARTED);
     }
+
+    fn is_in_vblank(&self) -> bool {
+        self.contains(StatusRegister::VBLANK_STARTED)
+    }
 }
 
 pub struct PPU {
@@ -200,7 +204,12 @@ impl PPU {
     }
 
     pub fn write_in_control(&mut self, value: u8) {
+        let before_nmi_status = self.control.generate_vblank_nmi();
         self.control.update(value);
+
+        if !before_nmi_status && self.control.generate_vblank_nmi() && self.status.is_in_vblank() {
+            self.nmi_interrupt = Some(1);
+        }
     }
 
     fn increment_vram_address(&mut self) {
