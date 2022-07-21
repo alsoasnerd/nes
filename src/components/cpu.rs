@@ -240,6 +240,10 @@ impl CPU {
         let assembler = Assembler::new();
 
         loop {
+            if let Some(_nmi) = self.bus.pool_nmi_status() {
+                self.interrupt_nmi();
+            }
+
             let code = self.memory_read(self.register_pc);
             self.register_pc += 1;
 
