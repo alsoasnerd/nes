@@ -110,4 +110,8 @@ impl BUS {
         self.cycles += cycles as usize;
         self.ppu.tick(cycles * 3);
     }
+
+    pub fn pool_nmi_status(&mut self) -> Option<u8> {
+        self.ppu.interrupt_nmi.take()
+    }
 }
