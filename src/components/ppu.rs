@@ -20,7 +20,7 @@ bitflags! {
    // +--------- Generate an NMI at the start of the
    //            vertical blanking interval (0: off; 1: on)
 
-   pub struct ControlRegister: u8 {
+   struct ControlRegister: u8 {
        const NAMETABLE1                = 0b00000001;
        const NAMETABLE2                = 0b00000010;
        const VRAM_ADD_INCREMENT        = 0b00000100;
@@ -33,11 +33,11 @@ bitflags! {
 }
 
 impl ControlRegister {
-    pub fn new() -> Self {
+    fn new() -> Self {
         ControlRegister::from_bits_truncate(0b00000000)
     }
 
-    pub fn vram_address_increment(&self) -> u8 {
+    fn vram_address_increment(&self) -> u8 {
         if self.contains(ControlRegister::VRAM_ADD_INCREMENT) {
             32
         } else {
@@ -45,19 +45,19 @@ impl ControlRegister {
         }
     }
 
-    pub fn update(&mut self, value: u8) {
+    fn update(&mut self, value: u8) {
         self.bits = value;
     }
 }
 
-pub struct AddressRegister {
+struct AddressRegister {
     low: u8,
     high: u8,
     high_pointer: bool,
 }
 
 impl AddressRegister {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             low: 0,
             high: 0,
@@ -65,19 +65,19 @@ impl AddressRegister {
         }
     }
 
-    pub fn get(&self) -> u16 {
+    fn get(&self) -> u16 {
         let high_u16 = self.high as u16;
         let low_u16 = self.low as u16;
 
         (high_u16 << 8) | low_u16
     }
 
-    pub fn set(&mut self, value: u16) {
+    fn set(&mut self, value: u16) {
         self.high = (value >> 8) as u8;
         self.low = (value & 0xff) as u8;
     }
 
-    pub fn update(&mut self, value: u8) {
+    fn update(&mut self, value: u8) {
         if self.high_pointer {
             self.high = value;
         } else {
@@ -91,7 +91,7 @@ impl AddressRegister {
         self.high_pointer = self.high_pointer;
     }
 
-    pub fn increment(&mut self, value: u8) {
+    fn increment(&mut self, value: u8) {
         let old_low = self.low;
         self.low = self.low.wrapping_add(value);
 
@@ -104,8 +104,57 @@ impl AddressRegister {
         }
     }
 
-    pub fn reset_latch(&mut self) {
+    fn reset_latch(&mut self) {
         self.high_pointer = true;
+    }
+}
+
+bitflags! {
+
+    // 7  bit  0
+    // ---- ----
+    // VSO. ....
+    // |||| ||||
+    // |||+-++++- Least significant bits previously written into a PPU register
+    // |||        (due to register not being updated for this address)
+    // ||+------- Sprite overflow. The intent was for this flag to be set
+    // ||         whenever more than eight sprites appear on a scanline, but a
+    // ||         hardware bug causes the actual behavior to be more complicated
+    // ||         and generate false positives as well as false negatives; see
+    // ||         PPU sprite evaluation. This flag is set during sprite
+    // ||         evaluation and cleared at dot 1 (the second dot) of the
+    // ||         pre-render line.
+    // |+-------- Sprite 0 Hit.  Set when a nonzero pixel of sprite 0 overlaps
+    // |          a nonzero background pixel; cleared at dot 1 of the pre-render
+    // |          line.  Used for raster timing.
+    // +--------- Vertical blank has started (0: not in vblank; 1: in vblank).
+    //            Set at dot 1 of line 241 (the line *after* the post-render
+    //            line); cleared after reading $2002 and at dot 1 of the
+    //            pre-render line.
+
+    struct StatusRegister: u8 {
+        const NOT_USED          = 0b0000_0001;
+        const NOT_USED2         = 0b0000_0010;
+        const NOT_USED3         = 0b0000_0100;
+        const NOT_USED4         = 0b0000_1000;
+        const NOT_USED5         = 0b0001_0000;
+        const SPRITE_OVERFLOW   = 0b0010_0000;
+        const SPRITE_ZERO_HIT   = 0b0100_0000;
+        const VBLANK_STARTED    = 0b1000_0000;
+    }
+}
+
+impl StatusRegister {
+    fn new() -> Self {
+        StatusRegister::from_bits_truncate(0b0000_0000)
+    }
+
+    fn set_vblank_status(&mut self, status: bool) {
+        self.set(StatusRegister::VBLANK_STARTED, status);
+    }
+
+    fn reset_vblank_status(&mut self) {
+        self.remove(StatusRegister::VBLANK_STARTED);
     }
 }
 
@@ -117,9 +166,10 @@ pub struct PPU {
     pub mirroring: Mirroring,
     address: AddressRegister,
     control: ControlRegister,
+    status: StatusRegister,
     internal_data_buffer: u8,
     scanline: u16,
-    cycles: usize
+    cycles: usize,
 }
 
 impl PPU {
@@ -132,7 +182,10 @@ impl PPU {
             mirroring,
             address: AddressRegister::new(),
             control: ControlRegister::new(),
+            status: StatusRegister::new(),
             internal_data_buffer: 0,
+            scanline: 0,
+            cycles: 0
         }
     }
 
@@ -205,7 +258,7 @@ impl PPU {
 
             _ => panic!("Unexpected access to mirrored space {}", address),
         }
-            self.increment_vram_address();
+        self.increment_vram_address();
     }
 
     pub fn tick(&mut self, cycles: u8) -> bool {
