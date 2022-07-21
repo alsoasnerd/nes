@@ -222,6 +222,8 @@ impl CPU {
     }
 
     pub fn update_pc(&mut self, opcode: &&OpCode, pc_state: u16) {
+        self.bus.tick(opcode.cycles);
+
         if pc_state == self.register_pc {
             self.register_pc += (opcode.len - 1) as u16;
         }
