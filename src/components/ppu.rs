@@ -48,6 +48,10 @@ impl ControlRegister {
     fn update(&mut self, value: u8) {
         self.bits = value;
     }
+
+    fn generate_vblank_nmi(&self) -> bool {
+        self.contains(ControlRegister::GENERATE_NMI)
+    }
 }
 
 struct AddressRegister {
