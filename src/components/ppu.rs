@@ -118,6 +118,8 @@ pub struct PPU {
     address: AddressRegister,
     control: ControlRegister,
     internal_data_buffer: u8,
+    scanline: u16,
+    cycles: usize
 }
 
 impl PPU {
@@ -204,5 +206,31 @@ impl PPU {
             _ => panic!("Unexpected access to mirrored space {}", address),
         }
             self.increment_vram_address();
+    }
+
+    pub fn tick(&mut self, cycles: u8) -> bool {
+        self.cycles += cycles as usize;
+
+        if !self.cycles >= 341 {
+            return false;
+        }
+
+        self.cycles -= 341;
+        self.scanline += 1;
+
+        if self.scanline == 241 {
+            if self.control.generate_vblank_nmi() {
+                self.status.set_vblank_status(true);
+                todo!("Should trigger NMI Interrupt")
+            }
+        }
+
+        if self.scanline >= 262 {
+            self.scanline = 0;
+            self.status.reset_vblank_status();
+            return true;
+        }
+
+        return false;
     }
 }
