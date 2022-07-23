@@ -349,4 +349,8 @@ impl Frame {
             self.data[base + 2]= rgb.2;
         }
     }
+
+    pub fn get_data(&self) -> &Vec<u8> {
+        &self.data
+    }
 }
