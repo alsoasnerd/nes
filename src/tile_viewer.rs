@@ -9,8 +9,8 @@ fn show_tiles(chr_rom: &Vec<u8>, bank: usize) -> Frame {
     assert!(bank <= 1);
 
     let mut frame = Frame::new();
-    let tile_x = 0;
-    let tile_y = 0;
+    let mut tile_x = 0;
+    let mut tile_y = 0;
     let bank = (bank * 0x1000) as usize;
 
     for tile in 0..255 {
