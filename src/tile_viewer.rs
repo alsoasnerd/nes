@@ -47,7 +47,7 @@ fn show_tiles(chr_rom: &Vec<u8>, bank: usize) -> Frame {
     frame
 }
 
-pub fn start() {
+pub fn start(game: &str) {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
@@ -65,7 +65,9 @@ pub fn start() {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
         .unwrap();
 
-    let bytes: Vec<u8> = std::fs::read("games/pacman.nes").unwrap();
+    let path_to_game = format!("games/{}.nes", game);
+
+    let bytes: Vec<u8> = std::fs::read(path_to_game).unwrap();
     let rom = ROM::new(&bytes).unwrap();
 
     let right_bank = show_tiles(&rom.chr_rom, 1);
