@@ -6,14 +6,14 @@ const CHR_ROM_PAGE_SIZE: usize = 8192;
 pub enum Mirroring {
     Vertical,
     Horizontal,
-    FourScreen
+    FourScreen,
 }
 
 pub struct ROM {
     pub prg_rom: Vec<u8>,
     pub chr_rom: Vec<u8>,
     pub mapper: u8,
-    pub screen_mirroring: Mirroring
+    pub screen_mirroring: Mirroring,
 }
 
 impl ROM {
@@ -50,7 +50,7 @@ impl ROM {
             prg_rom: binary_data[prg_rom_start..chr_rom_start].to_vec(),
             chr_rom: binary_data[chr_rom_start..(chr_rom_start + chr_rom_size)].to_vec(),
             mapper,
-            screen_mirroring
+            screen_mirroring,
         })
     }
 }
@@ -86,7 +86,7 @@ pub mod test {
     }
 
     pub fn test_rom() -> ROM {
-        let test_rom = create_rom( TestRom {
+        let test_rom = create_rom(TestRom {
             header: vec![
                 0x4E, 0x45, 0x53, 0x1A, 0x02, 0x01, 0x31, 00, 00, 00, 00, 00, 00, 00, 00, 00,
             ],

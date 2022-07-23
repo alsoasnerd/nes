@@ -1,6 +1,6 @@
+use crate::components::assembly::Assembler;
 use crate::components::cpu::AddressingMode;
 use crate::components::cpu::CPU;
-use crate::components::assembly::Assembler;
 
 pub fn trace(cpu: &mut CPU) -> String {
     let assembler = Assembler::new();
@@ -34,7 +34,9 @@ pub fn trace(cpu: &mut CPU) -> String {
 
             match opcode.mode {
                 AddressingMode::Immediate => format!("#${:02x}", address),
-                AddressingMode::ZeroPage => format!("${:02x} = {:02x}", memory_address, memory_value),
+                AddressingMode::ZeroPage => {
+                    format!("${:02x} = {:02x}", memory_address, memory_value)
+                }
 
                 AddressingMode::ZeroPageX => format!(
                     "${:02x},X @ {:02x} = {:02x}",
@@ -70,9 +72,9 @@ pub fn trace(cpu: &mut CPU) -> String {
                 _ => panic!(
                     "Unexpected Addressing Mode {:?} has opcode length 2. Code {:02x}",
                     opcode.mode, opcode.len
-                )
+                ),
             }
-        },
+        }
 
         3 => {
             let low = cpu.memory_read(old_pc + 1);
@@ -102,7 +104,9 @@ pub fn trace(cpu: &mut CPU) -> String {
                     }
                 }
 
-                AddressingMode::Absolute => format!("${:04x} = {:02x}", memory_address, memory_value),
+                AddressingMode::Absolute => {
+                    format!("${:04x} = {:02x}", memory_address, memory_value)
+                }
 
                 AddressingMode::AbsoluteX => format!(
                     "${:04x},X @ {:04x} = {:02x}",
@@ -117,11 +121,11 @@ pub fn trace(cpu: &mut CPU) -> String {
                 _ => panic!(
                     "Unexpected Addressing Mode {:?} has opcode length 3. Code {:02x}",
                     opcode.mode, opcode.len
-                )
+                ),
             }
-        },
+        }
 
-        _ => String::from("")
+        _ => String::from(""),
     };
 
     let hex_string = hex_dump
@@ -129,13 +133,21 @@ pub fn trace(cpu: &mut CPU) -> String {
         .map(|element| format!("{:02x}", element))
         .collect::<Vec<String>>()
         .join(" ");
-    let assembly_string = format!("{:04x}  {:8} {: >4} {}", old_pc, hex_string, opcode.mnemonic, info)
-        .trim()
-        .to_string();
+    let assembly_string = format!(
+        "{:04x}  {:8} {: >4} {}",
+        old_pc, hex_string, opcode.mnemonic, info
+    )
+    .trim()
+    .to_string();
 
     format!(
         "{:47} A:{:02x} X:{:02x} Y:{:02x} P:{:02x} SP:{:02x}",
-        assembly_string, cpu.register_a, cpu.register_x, cpu.register_y, cpu.register_p, cpu.register_sp,
+        assembly_string,
+        cpu.register_a,
+        cpu.register_x,
+        cpu.register_y,
+        cpu.register_p,
+        cpu.register_sp,
     )
     .to_ascii_uppercase()
 }

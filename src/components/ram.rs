@@ -1,12 +1,10 @@
 pub struct RAM {
-    content: [u8; 2048]
+    content: [u8; 2048],
 }
 
 impl RAM {
     pub fn new() -> Self {
-        Self {
-            content: [0; 2048]
-        }
+        Self { content: [0; 2048] }
     }
 
     pub fn read(&self, address: u16) -> u8 {

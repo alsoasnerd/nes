@@ -1,6 +1,6 @@
+use super::cartridges::ROM;
 use super::ppu::PPU;
 use super::ram::RAM;
-use super::cartridges::ROM;
 
 const RAM_START: u16 = 0x0000;
 const RAM_END: u16 = 0x1FFF;
@@ -11,7 +11,7 @@ pub struct BUS {
     ram: RAM,
     prg_rom: Vec<u8>,
     ppu: PPU,
-    cycles: usize
+    cycles: usize,
 }
 
 impl BUS {
@@ -22,7 +22,7 @@ impl BUS {
             ram: RAM::new(),
             prg_rom: rom.prg_rom,
             ppu,
-            cycles: 0
+            cycles: 0,
         }
     }
 
@@ -55,7 +55,7 @@ impl BUS {
 
     pub fn memory_write(&mut self, address: u16, data: u8) {
         match address {
-            RAM_START ..= RAM_END => {
+            RAM_START..=RAM_END => {
                 let adjusted_address = address & 0b11111111111;
                 self.ram.write(adjusted_address, data);
             }
@@ -66,7 +66,7 @@ impl BUS {
 
             0x2007 => self.ppu.write_in_data(data),
 
-            0x2008 ..= PPU_REGISTERS_END => {
+            0x2008..=PPU_REGISTERS_END => {
                 let adjusted_address = address & 0b00100000_00000111;
                 self.memory_write(adjusted_address, data);
             }
