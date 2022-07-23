@@ -1,66 +1,40 @@
-use nes::components::cartridges::ROM;
-use nes::components::cpu::CPU;
-use nes::components::bus::BUS;
-use nes::trace::trace;
-use rand::Rng;
+use crate::components::cartridges::ROM;
+use crate::components::ppu::SYSTEM_PALLETE;
+use crate::components::ppu::Frame;
 use sdl2::event::Event;
-use sdl2::EventPump;
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 
-fn color(byte: u8) -> Color {
-    match byte {
-        0 => sdl2::pixels::Color::BLACK,
-        1 => sdl2::pixels::Color::WHITE,
-        2 | 9 => sdl2::pixels::Color::GREY,
-        3 | 10 => sdl2::pixels::Color::RED,
-        4 | 11 => sdl2::pixels::Color::GREEN,
-        5 | 12 => sdl2::pixels::Color::BLUE,
-        6 | 13 => sdl2::pixels::Color::MAGENTA,
-        7 | 14 => sdl2::pixels::Color::YELLOW,
-        _ => sdl2::pixels::Color::CYAN,
-    }
-}
+fn show_tile(chr_rom: &Vec<u8>, bank: usize, tile: usize) -> Frame {
+    assert!(bank <= 1);
 
-fn read_screen_state(cpu: &mut CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
-    let mut frame_idx = 0;
-    let mut update = false;
-    for i in 0x0200..0x600 {
-        let color_idx = cpu.memory_read(i as u16);
-        let (b1, b2, b3) = color(color_idx).rgb();
-        if frame[frame_idx] != b1 || frame[frame_idx + 1] != b2 || frame[frame_idx + 2] != b3 {
-            frame[frame_idx] = b1;
-            frame[frame_idx + 1] = b2;
-            frame[frame_idx + 2] = b3;
-            update = true;
-        }
-        frame_idx += 3;
-    }
-    update
-}
+    let mut frame = Frame::new();
+    let bank = (bank * 0x1000) as usize;
 
-fn handle_user_input(cpu: &mut CPU, event_pump: &mut EventPump) {
-    for event in event_pump.poll_iter() {
-        match event {
-            Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
-                std::process::exit(0)
-            },
-            Event::KeyDown { keycode: Some(Keycode::W), .. } => {
-                cpu.memory_write(0xff, 0x77);
-            },
-            Event::KeyDown { keycode: Some(Keycode::S), .. } => {
-                cpu.memory_write(0xff, 0x73);
-            },
-            Event::KeyDown { keycode: Some(Keycode::A), .. } => {
-                cpu.memory_write(0xff, 0x61);
-            },
-            Event::KeyDown { keycode: Some(Keycode::D), .. } => {
-                cpu.memory_write(0xff, 0x64);
-            }
-            _ => {/* do nothing */}
+    let tile = &chr_rom[(bank + tile * 16) ..= (bank + tile * 16 + 15)];
+
+    for y in 0 ..= 7 {
+        let mut upper = tile[y];
+        let mut lower = tile[y + 8];
+
+        for x in (0 ..= 7).rev() {
+            let value = (1 & upper) << 1 | (1 & lower);
+            upper >>= 1;
+            lower >>= 1;
+
+            let rgb = match value {
+                0 => SYSTEM_PALLETE[0x01],
+                1 => SYSTEM_PALLETE[0x23],
+                2 => SYSTEM_PALLETE[0x27],
+                3 => SYSTEM_PALLETE[0x30],
+                _ => panic!("Invalid Color")
+            };
+
+            frame.set_pixel(x, y, rgb);
         }
     }
+
+    frame
 }
 
 fn main() {
@@ -80,17 +54,17 @@ fn main() {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240).unwrap();
 
 
-    let bytes: Vec<u8> = std::fs::read("games/pacman.nes").unwrap();
+    let bytes: Vec<u8> = std::fs::read("games/pacman.crate").unwrap();
     let rom = ROM::new(&bytes).unwrap();
 
-    let right_bank = todo!();
+    let right_bank = show_tile(&rom.chr_rom, 1,0);
 
-    texture.update(None, &right_bank.data, 256 * 3).unwrap();
+    texture.update(None, right_bank.get_data(), 256 * 3).unwrap();
     canvas.copy(&texture, None, None).unwrap();
     canvas.present();
 
     loop {
-        for event in event_pump.pool_iter() {
+        for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. } | Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     std::process::exit(0)
