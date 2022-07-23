@@ -37,7 +37,7 @@ fn show_tile(chr_rom: &Vec<u8>, bank: usize, tile: usize) -> Frame {
     frame
 }
 
-fn main() {
+pub fn start() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
