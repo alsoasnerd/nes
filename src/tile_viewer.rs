@@ -54,7 +54,7 @@ pub fn start() {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240).unwrap();
 
 
-    let bytes: Vec<u8> = std::fs::read("games/pacman.crate").unwrap();
+    let bytes: Vec<u8> = std::fs::read("games/pacman.nes").unwrap();
     let rom = ROM::new(&bytes).unwrap();
 
     let right_bank = show_tile(&rom.chr_rom, 1,0);
