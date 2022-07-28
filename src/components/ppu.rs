@@ -256,7 +256,7 @@ pub struct PPU {
     internal_data_buffer: u8,
     scanline: u16,
     cycles: usize,
-    nmi_interrupt: Option<u8>,
+    pub nmi_interrupt: Option<u8>,
 }
 
 impl PPU {
