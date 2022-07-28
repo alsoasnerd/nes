@@ -7,22 +7,27 @@ const RAM_END: u16 = 0x1FFF;
 const PPU_REGISTERS_START: u16 = 0x2000;
 const PPU_REGISTERS_END: u16 = 0x3FFF;
 
-pub struct BUS {
+pub struct BUS<'call> {
     ram: RAM,
     prg_rom: Vec<u8>,
     ppu: PPU,
     cycles: usize,
+    gameloop_callback: Box<dyn FnMut(&PPU) + 'call>
 }
 
-impl BUS {
-    pub fn new(rom: ROM) -> Self {
+impl<'a> BUS<'a> {
+    pub fn new<'call, F>(rom: ROM, gameloop_callback: F) -> BUS<'call>
+    where
+        F: FnMut(&PPU) + 'call
+    {
         let ppu = PPU::new(rom.chr_rom, rom.screen_mirroring);
 
-        Self {
+        BUS {
             ram: RAM::new(),
             prg_rom: rom.prg_rom,
             ppu,
             cycles: 0,
+            gameloop_callback: Box::from(gameloop_callback)
         }
     }
 
