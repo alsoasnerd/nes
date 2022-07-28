@@ -155,13 +155,14 @@ pub fn trace(cpu: &mut CPU) -> String {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::components::ppu::PPU;
     use crate::components::bus::BUS;
     use crate::components::cartridges::test::test_rom;
 
     #[test]
 
     fn test_format_trace() {
-        let mut bus = BUS::new(test_rom());
+        let mut bus = BUS::new(test_rom(), |_ppu: &PPU| {});
         bus.memory_write(100, 0xa2);
         bus.memory_write(101, 0x01);
         bus.memory_write(102, 0xca);
@@ -195,7 +196,7 @@ mod test {
 
     #[test]
     fn test_format_memory_acess() {
-        let mut bus = BUS::new(test_rom());
+        let mut bus = BUS::new(test_rom(), |_ppu: &PPU| {});
         // ORA ($33), Y
         bus.memory_write(100, 0x11);
         bus.memory_write(101, 0x33);
