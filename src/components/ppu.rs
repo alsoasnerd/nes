@@ -1,7 +1,8 @@
-use std::vec;
-
 use super::cartridges::Mirroring;
 use bitflags::bitflags;
+
+const FIRST_NAMESPACE_START: u16 = 0;
+const FIRST_NAMESPACE_END: u16 = 0x3C0;
 
 pub static SYSTEM_PALLETE: [(u8, u8, u8); 64] = [
     (0x80, 0x80, 0x80),
@@ -411,5 +412,42 @@ impl Frame {
 
     pub fn get_data(&self) -> &Vec<u8> {
         &self.data
+    }
+}
+
+pub fn render(ppu: &PPU, frame: &mut Frame) {
+    let bank = ppu.control.background_pattern_address();
+
+    for i in FIRST_NAMESPACE_START..FIRST_NAMESPACE_END {
+        let tile = ppu.vram[1] as u16;
+        let tile_x = i % 32;
+        let tile_y = i / 32;
+        let tile = &ppu.chr_rom[(bank + tile * 16) as usize ..= (bank + tile * 16 + 15) as usize];
+
+        for y in 0..=7 {
+            let mut upper = tile[y];
+            let mut lower = tile[y + 8];
+
+            for x in (0..=7).rev() {
+                let value = (1 & upper) << 1 | (1 & lower);
+                upper >>= 1;
+                lower >>= 1;
+
+                let rgb = match value {
+                    0 => SYSTEM_PALLETE[0x01],
+                    1 => SYSTEM_PALLETE[0x23],
+                    2 => SYSTEM_PALLETE[0x27],
+                    3 => SYSTEM_PALLETE[0x30],
+                    _ => panic!("Invalid RGB")
+                };
+
+                let y = y as u16;
+
+                let x = (tile_x * 8 + x) as usize;
+                let y = (tile_y * 8 + y) as usize;
+
+                frame.set_pixel(x, y, rgb);
+            }
+        }
     }
 }
