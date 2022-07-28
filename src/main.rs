@@ -1,4 +1,4 @@
-use nes::tile_viewer;
+// use nes::tile_viewer;
 use std::io::stdin;
 fn main() {
     let mut input = String::new();
@@ -6,5 +6,6 @@ fn main() {
     stdin().read_line(&mut input).expect("Read Line Failed");
 
     let game = input.trim().to_lowercase();
-    tile_viewer::start(&game);
+    nes::start(&game);
+    // tile_viewer::start(&game);
 }
