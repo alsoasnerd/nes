@@ -44,18 +44,18 @@ pub enum AddressingMode {
     NoneAddressing,
 }
 
-pub struct CPU {
+pub struct CPU<'bus> {
     pub register_a: u8,
     pub register_x: u8,
     pub register_y: u8,
     pub register_p: CpuFlags,
     pub register_pc: u16,
     pub register_sp: u8,
-    bus: BUS,
+    bus: BUS<'bus>,
 }
 
-impl CPU {
-    pub fn new(bus: BUS) -> Self {
+impl<'a> CPU<'a> {
+    pub fn new(bus: BUS<'a>) -> Self {
         CPU {
             register_a: 0,
             register_x: 0,
