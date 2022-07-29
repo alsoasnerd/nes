@@ -415,14 +415,33 @@ impl Frame {
     }
 }
 
+fn background_pallete(ppu: &PPU, tile_column: usize, tile_row: usize) -> [u8; 4] {
+    let attribute_table_index = tile_row / 4 * 8 + tile_column / 4;
+    let attribute_byte = ppu.vram[FIRST_NAMESPACE_END as usize + attribute_table_index];
+
+    let pallete_index = match (tile_column % 4 / 2, tile_row % 4 / 2) {
+        (0, 0) => attribute_byte & 0b11,
+        (1, 0) => (attribute_byte >> 2) & 0b11,
+        (0, 1) => (attribute_byte >> 4) & 0b11,
+        (1, 1) => (attribute_byte >> 6) & 0b11,
+        (_, _) => panic!("Don't expected")
+    };
+
+    let pallete_start = 1 + (pallete_index as usize) * 4;
+
+    [ppu.pallete_table[0], ppu.pallete_table[pallete_start],
+    ppu.pallete_table[pallete_start + 1], ppu.pallete_table[pallete_start + 2]]
+}
+
 pub fn render(ppu: &PPU, frame: &mut Frame) {
     let bank = ppu.control.background_pattern_address();
 
     for i in FIRST_NAMESPACE_START..FIRST_NAMESPACE_END {
         let tile = ppu.vram[1] as u16;
-        let tile_x = i % 32;
-        let tile_y = i / 32;
+        let tile_column = i % 32;
+        let tile_row = i / 32;
         let tile = &ppu.chr_rom[(bank + tile * 16) as usize ..= (bank + tile * 16 + 15) as usize];
+        let pallete = background_pallete(ppu, tile_column as usize, tile_row as usize);
 
         for y in 0..=7 {
             let mut upper = tile[y];
@@ -434,17 +453,17 @@ pub fn render(ppu: &PPU, frame: &mut Frame) {
                 lower >>= 1;
 
                 let rgb = match value {
-                    0 => SYSTEM_PALLETE[0x01],
-                    1 => SYSTEM_PALLETE[0x23],
-                    2 => SYSTEM_PALLETE[0x27],
-                    3 => SYSTEM_PALLETE[0x30],
+                    0 => SYSTEM_PALLETE[ppu.pallete_table[0] as usize],
+                    1 => SYSTEM_PALLETE[pallete[1] as usize],
+                    2 => SYSTEM_PALLETE[pallete[2] as usize],
+                    3 => SYSTEM_PALLETE[pallete[3] as usize],
                     _ => panic!("Invalid RGB")
                 };
 
                 let y = y as u16;
 
-                let x = (tile_x * 8 + x) as usize;
-                let y = (tile_y * 8 + y) as usize;
+                let x = (tile_column * 8 + x) as usize;
+                let y = (tile_row * 8 + y) as usize;
 
                 frame.set_pixel(x, y, rgb);
             }
