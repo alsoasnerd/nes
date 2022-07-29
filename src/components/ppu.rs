@@ -433,6 +433,16 @@ fn background_pallete(ppu: &PPU, tile_column: usize, tile_row: usize) -> [u8; 4]
     ppu.pallete_table[pallete_start + 1], ppu.pallete_table[pallete_start + 2]]
 }
 
+fn sprite_pallete(ppu: &PPU, pallete_index: u8) -> [u8;4] {
+    let start = 0x11 + (pallete_index * 4) as usize;
+    [
+        0,
+        ppu.pallete_table[start],
+        ppu.pallete_table[start + 1],
+        ppu.pallete_table[start + 2]
+    ]
+}
+
 pub fn render(ppu: &PPU, frame: &mut Frame) {
     let bank = ppu.control.background_pattern_address();
 
