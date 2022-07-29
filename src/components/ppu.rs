@@ -487,4 +487,54 @@ pub fn render(ppu: &PPU, frame: &mut Frame) {
             }
         }
     }
+
+    for i in (0..ppu.oam_data.len()).step_by(4).rev() {
+        let tile_index = ppu.oam_data[i + 1] as u16;
+        let tile_x = ppu.oam_data[i + 3] as u16;
+        let tile_y = ppu.oam_data[i] as usize;
+
+        let flip_vertical = if ppu.oam_data[i + 2] >> 7 & 1 == 1 {
+            true
+        } else {
+            false
+        };
+
+        let flip_horizontal = if ppu.oam_data[i + 2] >> 6 & 1 == 1 {
+            true
+        } else {
+            false
+        };
+
+        let pallete_index = ppu.oam_data[i + 2] & 0b11;
+        let sprite_pallete = sprite_pallete(ppu, pallete_index);
+        let bank = ppu.control.sprite_pattern_address();
+
+        let tile = &ppu.chr_rom[(bank + tile_index * 16) as usize ..= (bank + tile_index * 16 + 15) as usize];
+
+        for y in 0..=7 {
+            let mut upper = tile[y];
+            let mut lower = tile[y + 8];
+
+            'ololo: for x in (0..=7).rev() {
+                let value = (1 & lower) << 1 | (1 & upper);
+                upper = upper >> 1;
+                lower = lower >> 1;
+
+                let rgb = match value {
+                    0 => continue 'ololo, // skip coloring the pixel
+                    1 => SYSTEM_PALLETE[sprite_pallete[1] as usize],
+                    2 => SYSTEM_PALLETE[sprite_pallete[2] as usize],
+                    3 => SYSTEM_PALLETE[sprite_pallete[3] as usize],
+                    _ => panic!("Don't expected"),
+                };
+
+                match (flip_horizontal, flip_vertical) {
+                    (false, false) => frame.set_pixel(tile_x as usize + x, tile_y + y, rgb),
+                    (true, false) => frame.set_pixel(tile_x as usize + 7 - x, tile_y + y, rgb),
+                    (false, true) => frame.set_pixel(tile_x as usize + x, tile_y + 7 - y, rgb),
+                    (true, true) => frame.set_pixel(tile_x as usize+ 7 - x, tile_y + 7 - y, rgb)
+                }
+            }
+        }
+    }
 }
