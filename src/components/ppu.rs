@@ -130,6 +130,14 @@ impl ControlRegister {
             0x1000
         }
     }
+
+    fn sprite_pattern_address(&self) -> u16 {
+        if !self.contains(ControlRegister::SPRITE_PATTERN_ADDRESS) {
+            0
+        } else {
+            0x1000
+        }
+    }
 }
 
 struct AddressRegister {
