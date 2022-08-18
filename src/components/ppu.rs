@@ -305,6 +305,36 @@ impl MaskRegister {
     }
 }
 
+struct ScrollRegister {
+    scroll_x: u8,
+    scroll_y: u8,
+    latch: bool
+}
+
+impl ScrollRegister {
+    fn new() -> Self {
+        ScrollRegister {
+            scroll_x: 0,
+            scroll_y: 0,
+            latch: false
+        }
+    }
+
+    fn write(&mut self, value: u8) {
+        if self.latch {
+            self.scroll_y = value;
+        } else {
+            self.scroll_x = value;
+        }
+
+        self.latch = !self.latch;
+    }
+
+    fn reset_latch(&mut self) {
+        self.latch = false;
+    }
+}
+
 bitflags! {
 
     // 7  bit  0
@@ -349,12 +379,24 @@ impl StatusRegister {
         self.set(StatusRegister::VBLANK_STARTED, status);
     }
 
+    fn set_sprite_zero_hit(&mut self, value: bool) {
+        self.set(StatusRegister::SPRITE_ZERO_HIT, value);
+    }
+
+    fn set_sprite_overflow(&mut self, value: bool) {
+        self.set(StatusRegister::SPRITE_OVERFLOW, value);
+    }
+
     fn reset_vblank_status(&mut self) {
         self.remove(StatusRegister::VBLANK_STARTED);
     }
 
     fn is_in_vblank(&self) -> bool {
         self.contains(StatusRegister::VBLANK_STARTED)
+    }
+
+    fn get_bits(&self) -> u8 {
+        self.bits
     }
 }
 
