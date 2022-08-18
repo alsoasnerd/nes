@@ -107,6 +107,16 @@ impl ControlRegister {
         ControlRegister::from_bits_truncate(0b00000000)
     }
 
+    fn nametable_address(&self) -> u16 {
+        match self.bits & 0b11 {
+            0 => 0x2000,
+            1 => 0x2400,
+            2 => 0x2800,
+            3 => 0x2c00,
+            _ => panic!("Invalid nametable address")
+        }
+    }
+
     fn vram_address_increment(&self) -> u8 {
         if self.contains(ControlRegister::VRAM_ADD_INCREMENT) {
             32
