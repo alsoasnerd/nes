@@ -39,10 +39,29 @@ impl<'a> BUS<'a> {
             }
 
             PPU_REGISTERS_START | 0x2001 | 0x2003 | 0x2005 | 0x2006 | 0x4014 => {
-                panic!("Attempt to read from write-only PPU address {:x}", address);
+                0
             }
 
+            0x2002 => self.ppu.read_status(),
+
+            0x2004 => self.ppu.read_oam_data(),
+
             0x2007 => self.ppu.read_data(),
+
+            0x4000..=0x4015 => {
+                //ignore APU
+                0
+            }
+
+            0x4016 => {
+                // ignore joypad 1;
+                0
+            }
+
+            0x4017 => {
+                // ignore joypad 2
+                0
+            }
 
             0x2008..=PPU_REGISTERS_END => {
                 let adjusted_address = address & 0b00100000_00000111;
@@ -67,9 +86,41 @@ impl<'a> BUS<'a> {
 
             PPU_REGISTERS_START => self.ppu.write_in_control(data),
 
+            0x2001 => self.ppu.write_to_mask(data),
+
+            0x2002 => panic!("Don't write to PPU status register"),
+
+            0x2003 => self.ppu.write_to_oam_address(data),
+
+            0x2004 => self.ppu.write_to_oam_data(data),
+
+            0x2005 => self.ppu.write_to_scroll(data),
+
             0x2006 => self.ppu.write_in_ppu_address(data),
 
             0x2007 => self.ppu.write_in_data(data),
+
+            0x4000..=0x4013 | 0x4015 => {
+                //ignore APU
+            }
+
+            0x4016 => {
+                // ignore joypad 1;
+            }
+
+            0x4017 => {
+                // ignore joypad 2
+            }
+
+            0x4014 => {
+                let mut buffer: [u8; 256] = [0; 256];
+                let hi: u16 = (data as u16) << 8;
+                for i in 0..256u16 {
+                    buffer[i as usize] = self.memory_read(hi + i);
+                }
+
+                self.ppu.write_oam_dma(&buffer);
+            }
 
             0x2008..=PPU_REGISTERS_END => {
                 let adjusted_address = address & 0b00100000_00000111;
@@ -81,7 +132,7 @@ impl<'a> BUS<'a> {
             }
 
             _ => {
-                println!("Ignoring memory write-access at {}", address);
+                println!("Ignoring memory write-access at {:02x}", address);
             }
         }
     }
@@ -114,11 +165,9 @@ impl<'a> BUS<'a> {
     pub fn tick(&mut self, cycles: u8) {
         self.cycles += cycles as usize;
 
-        let nmi_before = self.ppu.nmi_interrupt.is_some();
-        self.ppu.tick(cycles * 3);
-        let nmi_after = self.ppu.nmi_interrupt.is_some();
+        let new_frame = self.ppu.tick(cycles * 3);
 
-        if !nmi_before && nmi_after {
+        if new_frame {
             (self.gameloop_callback)(&self.ppu);
         }
     }
