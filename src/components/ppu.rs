@@ -204,7 +204,7 @@ impl AddressRegister {
             self.set(self.get() & 0b11111111111111);
         }
 
-        self.high_pointer = self.high_pointer;
+        self.high_pointer = !self.high_pointer;
     }
 
     fn increment(&mut self, value: u8) {
