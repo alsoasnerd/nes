@@ -134,18 +134,34 @@ impl ControlRegister {
     }
 
     fn background_pattern_address(&self) -> u16 {
-        if !self.contains(ControlRegister::BACKGROUND_PATTERN_ADDRESS) {
-            0
-        } else {
+        if self.contains(ControlRegister::BACKGROUND_PATTERN_ADDRESS) {
             0x1000
+        } else {
+            0
         }
     }
 
     fn sprite_pattern_address(&self) -> u16 {
-        if !self.contains(ControlRegister::SPRITE_PATTERN_ADDRESS) {
-            0
-        } else {
+        if self.contains(ControlRegister::SPRITE_PATTERN_ADDRESS) {
             0x1000
+        } else {
+            0
+        }
+    }
+
+    fn sprite_size(&self) -> u8 {
+        if self.contains(ControlRegister::SPRITE_SIZE) {
+            16
+        } else {
+            8
+        }
+    }
+
+    fn master_slave_select(&self) -> u8 {
+        if self.contains(ControlRegister::SPRITE_SIZE) {
+            1
+        } else {
+            0
         }
     }
 }
