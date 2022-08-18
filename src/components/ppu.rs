@@ -404,10 +404,13 @@ pub struct PPU {
     pub chr_rom: Vec<u8>,
     pub pallete_table: [u8; 32],
     pub vram: [u8; 2048],
+    oam_address: u8,
     pub oam_data: [u8; 256],
     pub mirroring: Mirroring,
     address: AddressRegister,
     control: ControlRegister,
+    mask: MaskRegister,
+    scroll: ScrollRegister,
     status: StatusRegister,
     internal_data_buffer: u8,
     scanline: u16,
@@ -421,16 +424,23 @@ impl PPU {
             chr_rom,
             pallete_table: [0; 32],
             vram: [0; 2048],
+            oam_address: 0,
             oam_data: [0; 64 * 4],
             mirroring,
             address: AddressRegister::new(),
             control: ControlRegister::new(),
+            mask: MaskRegister::new(),
+            scroll: ScrollRegister::new(),
             status: StatusRegister::new(),
             internal_data_buffer: 0,
             scanline: 0,
             cycles: 0,
             nmi_interrupt: None,
         }
+    }
+
+    pub fn new_empty_rom() -> Self {
+        PPU::new(vec![0; 2048], Mirroring::Horizontal)
     }
 
     pub fn write_in_ppu_address(&mut self, value: u8) {
@@ -444,6 +454,10 @@ impl PPU {
         if !before_nmi_status && self.control.generate_vblank_nmi() && self.status.is_in_vblank() {
             self.nmi_interrupt = Some(1);
         }
+    }
+
+    pub fn write_to_mask(&mut self, value: u8) {
+        self.mask.update(value);
     }
 
     fn increment_vram_address(&mut self) {
@@ -488,6 +502,15 @@ impl PPU {
         }
     }
 
+    pub fn read_status(&mut self) -> u8 {
+        let data = self.status.bits();
+        self.status.reset_vblank_status();
+        self.address.reset_latch();
+        self.scroll.reset_latch();
+
+        data
+    }
+
     pub fn write_in_data(&mut self, data: u8) {
         let address = self.address.get();
 
@@ -510,6 +533,34 @@ impl PPU {
         self.increment_vram_address();
     }
 
+    pub fn write_to_oam_address(&mut self, value: u8) {
+        self.oam_address = value;
+    }
+
+    pub fn read_oam_data(&self) -> u8 {
+        self.oam_data[self.oam_address as usize]
+    }
+
+    pub fn write_to_oam_data(&mut self, value: u8) {
+        self.oam_data[self.oam_address as usize] = value;
+        self.oam_address = self.oam_address.wrapping_add(1);
+    }
+
+    pub fn write_to_scroll(&mut self, value: u8) {
+        self.scroll.write(value);
+    }
+
+    pub fn write_to_address(&mut self, value: u8) {
+        self.address.update(value);
+    }
+
+    pub fn write_oam_dma(&mut self, data: &[u8; 256]) {
+        for x in data.iter() {
+            self.oam_data[self.oam_address as usize] = *x;
+            self.oam_address = self.oam_address.wrapping_add(1);
+        }
+    }
+
     pub fn tick(&mut self, cycles: u8) -> bool {
         self.cycles += cycles as usize;
 
@@ -522,6 +573,7 @@ impl PPU {
 
         if self.scanline == 241 {
             self.status.set_vblank_status(true);
+            self.status.set_sprite_zero_hit(false);
             if self.control.generate_vblank_nmi() {
                 self.nmi_interrupt = Some(1);
             }
@@ -530,6 +582,7 @@ impl PPU {
         if self.scanline >= 262 {
             self.scanline = 0;
             self.nmi_interrupt = None;
+            self.status.set_sprite_zero_hit(false);
             self.status.reset_vblank_status();
             return true;
         }
