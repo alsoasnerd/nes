@@ -30,6 +30,10 @@ bitflags! {
 const STACK: u16 = 0x0100;
 const STACK_RESET: u8 = 0xfd;
 
+fn page_cross(address1: u16, address2: u16) -> bool {
+    address1 & 0xFF00 != address2 & 0xFF00
+}
+
 #[derive(Debug)]
 pub enum AddressingMode {
     Immediate,
@@ -43,6 +47,25 @@ pub enum AddressingMode {
     IndirectY,
     NoneAddressing,
 }
+
+#[derive(PartialEq, Eq)]
+pub enum InterruptType {
+    NMI
+}
+
+pub struct Interrupt {
+    pub interrupt_type: InterruptType,
+    pub vector_address: u16,
+    pub binary_flag_mask: u8,
+    pub cpu_cycles: u8
+}
+
+pub const NMI: Interrupt = Interrupt {
+    interrupt_type: InterruptType::NMI,
+    vector_address: 0xFFFA,
+    binary_flag_mask: 0b00100000,
+    cpu_cycles: 2
+};
 
 pub struct CPU<'bus> {
     pub register_a: u8,
@@ -270,32 +293,32 @@ impl<'a> CPU<'a> {
         }
     }
 
-    pub fn get_absolute_address(&mut self, mode: &AddressingMode, address: u16) -> u16 {
+    pub fn get_absolute_address(&mut self, mode: &AddressingMode, address: u16) -> (u16, bool) {
         match mode {
-            AddressingMode::ZeroPage => self.memory_read(address) as u16,
+            AddressingMode::ZeroPage => (self.memory_read(address) as u16, false),
 
-            AddressingMode::Absolute => self.memory_read_u16(address),
+            AddressingMode::Absolute => (self.memory_read_u16(address), false),
 
             AddressingMode::ZeroPageX => {
                 let address = self.memory_read(address);
                 let address = address.wrapping_add(self.register_x) as u16;
-                address
+                (address, false)
             }
             AddressingMode::ZeroPageY => {
                 let address = self.memory_read(address);
                 let address = address.wrapping_add(self.register_y) as u16;
-                address
+                (address, false)
             }
 
             AddressingMode::AbsoluteX => {
                 let base = self.memory_read_u16(address);
                 let address = base.wrapping_add(self.register_x as u16);
-                address
+                (address, page_cross(base, address))
             }
             AddressingMode::AbsoluteY => {
                 let base = self.memory_read_u16(address);
                 let address = base.wrapping_add(self.register_y as u16);
-                address
+                (address, page_cross(base, address))
             }
 
             AddressingMode::IndirectX => {
@@ -304,7 +327,9 @@ impl<'a> CPU<'a> {
                 let ptr: u8 = (base as u8).wrapping_add(self.register_x);
                 let low = self.memory_read(ptr as u16);
                 let high = self.memory_read(ptr.wrapping_add(1) as u16);
-                (high as u16) << 8 | (low as u16)
+
+                let result = (high as u16) << 8 | (low as u16);
+                (result, false)
             }
             AddressingMode::IndirectY => {
                 let base = self.memory_read(address);
@@ -313,7 +338,7 @@ impl<'a> CPU<'a> {
                 let high = self.memory_read((base as u8).wrapping_add(1) as u16);
                 let deref_base = (high as u16) << 8 | (low as u16);
                 let deref = deref_base.wrapping_add(self.register_y as u16);
-                deref
+                (deref, page_cross(deref, deref_base))
             }
 
             _ => {
