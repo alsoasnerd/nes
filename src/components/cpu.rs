@@ -106,6 +106,19 @@ impl<'a> CPU<'a> {
         self.bus.memory_write_u16(address, value)
     }
 
+    fn interrupt(&mut self, interrupt: Interrupt) {
+        self.stack_push_u16(self.register_pc);
+        let mut flag = self.register_p.clone();
+        flag.set(CpuFlags::BREAK, interrupt.binary_flag_mask & 0b010000 == 1);
+        flag.set(CpuFlags::UNUSED, interrupt.binary_flag_mask & 0b100000 == 1);
+
+        self.stack_push(flag.bits);
+        self.register_p.insert(CpuFlags::INTERRUPT_DISABLE);
+
+        self.bus.tick(interrupt.cpu_cycles);
+        self.register_pc = self.memory_read_u16(interrupt.vector_address);
+    }
+
     pub fn set_register_a(&mut self, value: u8) {
         self.register_a = value;
         self.update_zero_and_negative_flags(self.register_a);
@@ -223,7 +236,7 @@ impl<'a> CPU<'a> {
     }
 
     pub fn compare(&mut self, mode: &AddressingMode, compare_with: u8) {
-        let address = self.get_operand_address(mode);
+        let (address, page_cross) = self.get_operand_address(mode);
         let value = self.memory_read(address);
         if value <= compare_with {
             self.register_p.insert(CpuFlags::CARRY);
@@ -232,15 +245,26 @@ impl<'a> CPU<'a> {
         }
 
         self.update_zero_and_negative_flags(compare_with.wrapping_sub(value));
+
+        if page_cross {
+            self.bus.tick(1);
+        }
     }
 
     pub fn branch(&mut self, condition: bool) {
         if condition {
-            let jump: i8 = self.memory_read(self.register_pc) as i8;
-            let jump_addr = self.register_pc.wrapping_add(1).wrapping_add(jump as u16);
+            self.bus.tick(1);
 
-            self.register_pc = jump_addr;
+            let jump: i8 = self.memory_read(self.register_pc) as i8;
+            let jump_address = self.register_pc.wrapping_add(1).wrapping_add(jump as u16);
+
+            if self.register_pc.wrapping_add(1) & 0xFF00 != jump_address & 0xFF00 {
+                self.bus.tick(1);
+            }
+
+            self.register_pc = jump_address;
         }
+
     }
 
     pub fn update_pc(&mut self, opcode: &&OpCode, pc_state: u16) {
@@ -276,7 +300,7 @@ impl<'a> CPU<'a> {
 
         loop {
             if let Some(_nmi) = self.bus.pool_nmi_status() {
-                self.interrupt_nmi();
+                self.interrupt(interrupt::NMI);
             }
 
             let code = self.memory_read(self.register_pc);
@@ -411,7 +435,7 @@ impl<'a> CPU<'a> {
     }
 
     pub fn bit(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let value = self.memory_read(address);
         let and = self.register_a & value;
         if and == 0 {
@@ -477,7 +501,7 @@ impl<'a> CPU<'a> {
     }
 
     pub fn dec(&mut self, mode: &AddressingMode) -> u8 {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let mut value = self.memory_read(address);
         value = value.wrapping_sub(1);
         self.memory_write(address, value);
@@ -506,7 +530,7 @@ impl<'a> CPU<'a> {
     }
 
     pub fn inc(&mut self, mode: &AddressingMode) -> u8 {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let mut value = self.memory_read(address);
         value = value.wrapping_add(1);
         self.memory_write(address, value);
@@ -626,7 +650,6 @@ impl<'a> CPU<'a> {
     }
 
     pub fn php(&mut self) {
-        //http://wiki.nesdev.com/w/address.php/CPU_status_flag_behavior
         let mut flags = self.register_p.clone();
         flags.insert(CpuFlags::BREAK);
         flags.insert(CpuFlags::UNUSED);
