@@ -140,6 +140,7 @@ impl<'a> CPU<'a> {
     pub fn load_and_run(&mut self, program: Vec<u8>) {
         self.load(program);
         self.reset();
+        self.register_pc = 0x0600;
         self.run()
     }
 
@@ -493,9 +494,13 @@ impl<'a> CPU<'a> {
     }
 
     pub fn eor(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, page_cross) = self.get_operand_address(mode);
         let value = self.memory_read(address);
         self.set_register_a(value ^ self.register_a);
+
+        if page_cross {
+            self.bus.tick(1);
+        }
     }
 
     pub fn inc(&mut self, mode: &AddressingMode) -> u8 {
@@ -605,9 +610,13 @@ impl<'a> CPU<'a> {
     // NOP is a simple {} in Assembler interpret function
 
     pub fn ora(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, page_cross) = self.get_operand_address(mode);
         let value = self.memory_read(address);
         self.set_register_a(value | self.register_a);
+
+        if page_cross {
+            self.bus.tick(1);
+        }
     }
 
     pub fn pha(&mut self) {
