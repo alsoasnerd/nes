@@ -718,8 +718,8 @@ pub fn render(ppu: &PPU, frame: &mut Frame) {
 
             'ololo: for x in (0..=7).rev() {
                 let value = (1 & lower) << 1 | (1 & upper);
-                upper = upper >> 1;
-                lower = lower >> 1;
+                upper >>= 1;
+                lower >>= 1;
 
                 let rgb = match value {
                     0 => continue 'ololo, // skip coloring the pixel
