@@ -148,8 +148,6 @@ impl<'a> CPU<'a> {
         for i in 0..(program.len() as u16) {
             self.memory_write(0x0600 + i, program[i as usize]);
         }
-
-        self.memory_write_u16(0xFFFC, 0x0600);
     }
 
     pub fn reset(&mut self) {
@@ -356,9 +354,13 @@ impl<'a> CPU<'a> {
     }
 
     pub fn adc(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, page_cross) = self.get_operand_address(mode);
         let value = self.memory_read(address);
         self.add_to_register_a(value);
+
+        if page_cross {
+            self.bus.tick(1);
+        }
     }
 
     pub fn and(&mut self, mode: &AddressingMode) {
@@ -378,19 +380,19 @@ impl<'a> CPU<'a> {
         } else {
             self.clear_carry_flag();
         }
-        value = value << 1;
+        value <<= 1;
         self.set_register_a(value)
     }
 
     pub fn asl(&mut self, mode: &AddressingMode) -> u8 {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let mut value = self.memory_read(address);
         if value >> 7 == 1 {
             self.set_carry_flag();
         } else {
             self.clear_carry_flag();
         }
-        value = value << 1;
+        value <<= 1;
         self.memory_write(address, value);
         self.update_zero_and_negative_flags(value);
         value
@@ -594,14 +596,14 @@ impl<'a> CPU<'a> {
     }
 
     pub fn lsr(&mut self, mode: &AddressingMode) -> u8 {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let mut value = self.memory_read(address);
         if value & 1 == 1 {
             self.set_carry_flag();
         } else {
             self.clear_carry_flag();
         }
-        value = value >> 1;
+        value >>= 1;
         self.memory_write(address, value);
         self.update_zero_and_negative_flags(value);
         value
@@ -651,7 +653,7 @@ impl<'a> CPU<'a> {
         } else {
             self.clear_carry_flag();
         }
-        value = value << 1;
+        value <<= 1;
         if old_carry {
             value = value | 1;
         }
@@ -659,7 +661,7 @@ impl<'a> CPU<'a> {
     }
 
     pub fn rol(&mut self, mode: &AddressingMode) -> u8 {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let mut value = self.memory_read(address);
         let old_carry = self.register_p.contains(CpuFlags::CARRY);
 
@@ -668,10 +670,12 @@ impl<'a> CPU<'a> {
         } else {
             self.clear_carry_flag();
         }
-        value = value << 1;
+        value <<= 1;
+
         if old_carry {
-            value = value | 1;
+            value |= 1;
         }
+
         self.memory_write(address, value);
         self.update_negative_flags(value);
         value
@@ -686,15 +690,18 @@ impl<'a> CPU<'a> {
         } else {
             self.clear_carry_flag();
         }
-        value = value >> 1;
+
+        value >>= 1;
+
         if old_carry {
-            value = value | 0b10000000;
+            value |= 0b10000000;
         }
+
         self.set_register_a(value);
     }
 
     pub fn ror(&mut self, mode: &AddressingMode) -> u8 {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let mut value = self.memory_read(address);
         let old_carry = self.register_p.contains(CpuFlags::CARRY);
 
@@ -703,7 +710,9 @@ impl<'a> CPU<'a> {
         } else {
             self.clear_carry_flag();
         }
-        value = value >> 1;
+
+        value >>= 1;
+
         if old_carry {
             value = value | 0b10000000;
         }
@@ -725,9 +734,13 @@ impl<'a> CPU<'a> {
     }
 
     pub fn sbc(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(&mode);
+        let (address, page_cross) = self.get_operand_address(&mode);
         let value = self.memory_read(address);
         self.add_to_register_a(((value as i8).wrapping_neg().wrapping_sub(1)) as u8);
+
+        if page_cross {
+            self.bus.tick(1);
+        }
     }
 
     pub fn sec(&mut self) {
