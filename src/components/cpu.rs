@@ -300,7 +300,7 @@ impl<'a> CPU<'a> {
 
         loop {
             if let Some(_nmi) = self.bus.pool_nmi_status() {
-                self.interrupt(interrupt::NMI);
+                self.interrupt(NMI);
             }
 
             let code = self.memory_read(self.register_pc);
