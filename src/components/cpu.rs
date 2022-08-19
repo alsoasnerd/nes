@@ -784,12 +784,12 @@ impl<'a> CPU<'a> {
     }
 
     pub fn stx(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         self.memory_write(address, self.register_x);
     }
 
     pub fn sty(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         self.memory_write(address, self.register_y);
     }
 
@@ -825,7 +825,7 @@ impl<'a> CPU<'a> {
     // unofficial opcodes
 
     pub fn dcp(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let mut value = self.memory_read(address);
 
         value = value.wrapping_sub(value);
@@ -856,7 +856,7 @@ impl<'a> CPU<'a> {
     // skb is a 2 byte NOP immediate
 
     pub fn axs(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let value = self.memory_read(address);
 
         let x_and_a = self.register_x & self.register_a;
@@ -872,7 +872,7 @@ impl<'a> CPU<'a> {
     }
 
     pub fn arr(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let value = self.memory_read(address);
 
         self.set_register_a(value & self.register_a);
@@ -898,14 +898,14 @@ impl<'a> CPU<'a> {
     }
 
     pub fn unofficial_sbc(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let value = self.memory_read(address);
 
         self.sub_from_register_a(value);
     }
 
     pub fn anc(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let value = self.memory_read(address);
 
         self.set_register_a(value & self.register_a);
@@ -918,7 +918,7 @@ impl<'a> CPU<'a> {
     }
 
     pub fn alr(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let value = self.memory_read(address);
 
         self.set_register_a(value & self.register_a);
@@ -926,8 +926,12 @@ impl<'a> CPU<'a> {
     }
 
     pub fn nop_read(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, page_cross) = self.get_operand_address(mode);
         let _value = self.memory_read(address);
+
+        if page_cross {
+            self.bus.tick(1);
+        }
 
         // do nothing
     }
@@ -945,7 +949,7 @@ impl<'a> CPU<'a> {
     // all unofficial NOP'S are just {} in assembly code
 
     pub fn lax(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let value = self.memory_read(address);
         self.set_register_a(value);
         self.register_x = self.register_a;
@@ -953,7 +957,7 @@ impl<'a> CPU<'a> {
 
     pub fn sax(&mut self, mode: &AddressingMode) {
         let value = self.register_a & self.register_x;
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
 
         self.memory_write(address, value);
     }
@@ -967,14 +971,14 @@ impl<'a> CPU<'a> {
         self.register_a = self.register_x;
         self.update_zero_and_negative_flags(self.register_a);
 
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let value = self.memory_read(address);
 
         self.set_register_a(value & self.register_a);
     }
 
     pub fn las(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         let mut value = self.memory_read(address);
 
         value &= self.register_sp;
