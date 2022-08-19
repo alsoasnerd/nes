@@ -361,9 +361,13 @@ impl<'a> CPU<'a> {
     }
 
     pub fn and(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, page_cross) = self.get_operand_address(mode);
         let value = self.memory_read(address);
         self.set_register_a(value & self.register_a);
+
+        if page_cross {
+            self.bus.tick(1);
+        }
     }
 
     pub fn asl_accumulator(&mut self) {
@@ -540,9 +544,13 @@ impl<'a> CPU<'a> {
     }
 
     pub fn lda(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(&mode);
+        let (address, page_cross) = self.get_operand_address(&mode);
         let value = self.memory_read(address);
         self.set_register_a(value);
+
+        if page_cross {
+            self.bus.tick(1);
+        }
     }
 
     pub fn ldx(&mut self, mode: &AddressingMode) {
@@ -726,7 +734,7 @@ impl<'a> CPU<'a> {
     }
 
     pub fn sta(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, _) = self.get_operand_address(mode);
         self.memory_write(address, self.register_a);
     }
 
