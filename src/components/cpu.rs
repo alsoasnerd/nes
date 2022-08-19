@@ -347,9 +347,9 @@ impl<'a> CPU<'a> {
         }
     }
 
-    fn get_operand_address(&mut self, mode: &AddressingMode) -> u16 {
+    fn get_operand_address(&mut self, mode: &AddressingMode) -> (u16, bool) {
         match mode {
-            AddressingMode::Immediate => self.register_pc,
+            AddressingMode::Immediate => (self.register_pc, false),
             _ => self.get_absolute_address(mode, self.register_pc),
         }
     }
@@ -546,17 +546,27 @@ impl<'a> CPU<'a> {
     }
 
     pub fn ldx(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, page_cross) = self.get_operand_address(mode);
         let value = self.memory_read(address);
+
         self.register_x = value;
         self.update_zero_and_negative_flags(self.register_x);
+
+        if page_cross {
+            self.bus.tick(1);
+        }
     }
 
     pub fn ldy(&mut self, mode: &AddressingMode) {
-        let address = self.get_operand_address(mode);
+        let (address, page_cross) = self.get_operand_address(mode);
         let value = self.memory_read(address);
+
         self.register_y = value;
         self.update_zero_and_negative_flags(self.register_y);
+
+        if page_cross {
+            self.bus.tick(1);
+        }
     }
 
     pub fn lsr_accumulator(&mut self) {
