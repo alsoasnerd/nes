@@ -1,6 +1,4 @@
-use super::cpu::AddressingMode;
-use super::cpu::CPU;
-use lazy_static::lazy_static;
+use super::cpu::{ AddressingMode, CPU };
 use std::collections::HashMap;
 
 pub struct OpCode {
@@ -363,13 +361,13 @@ lazy_static! {
 }
 
 pub struct Assembler {
-    pub opcodes: HashMap<u8, &'static OpCode>,
+    opcodes: HashMap<u8, &'static OpCode>
 }
 
 impl Assembler {
     pub fn new() -> Self {
-        Self {
-            opcodes: OPCODES_MAP.clone(),
+        Assembler {
+            opcodes: OPCODES_MAP.clone()
         }
     }
 
@@ -665,7 +663,7 @@ impl Assembler {
             0x9c => cpu.sya(),
         }
 
-        cpu.update_pc(opcode, pc_state);
+        cpu.update_pc(&opcode, pc_state);
         false
     }
 }

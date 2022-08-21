@@ -1,6 +1,5 @@
-pub mod assembly;
-pub mod bus;
-pub mod cartridges;
-pub mod cpu;
 pub mod ppu;
-pub mod ram;
+pub mod cartridge;
+pub mod bus;
+pub mod assembly;
+pub mod cpu;
