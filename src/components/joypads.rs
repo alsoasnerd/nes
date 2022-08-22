@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use sdl2::keyboard::Keycode;
 
 bitflags! {
-    struct JoypadButton: u8 {
+    pub struct JoypadButton: u8 {
         const RIGHT             = 0b1000_0000;
         const LEFT              = 0b0100_0000;
         const DOWN              = 0b0010_0000;
@@ -19,7 +19,7 @@ pub struct Joypad {
     strobe_mode: bool,
     button_index: u8,
     button_status: JoypadButton,
-    keymap: HashMap<Keycode, JoypadButton>
+    pub keymap: HashMap<Keycode, JoypadButton>
 }
 
 

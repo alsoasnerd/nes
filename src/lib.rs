@@ -1,10 +1,11 @@
-pub mod trace;
-pub mod render;
 pub mod components;
+pub mod render;
+pub mod trace;
 
 use components::bus::BUS;
 use components::cartridge::Rom;
 use components::cpu::CPU;
+use components::joypads::Joypad;
 use components::ppu::PPU;
 use render::Frame;
 
@@ -17,7 +18,6 @@ extern crate lazy_static;
 
 #[macro_use]
 extern crate bitflags;
-
 
 pub fn run(game: &str) {
     let sdl_context = sdl2::init().unwrap();
@@ -48,18 +48,34 @@ pub fn run(game: &str) {
         texture.update(None, &frame.data, 256 * 3).unwrap();
 
         canvas.copy(&texture, None, None).unwrap();
-
         canvas.present();
+
+        let joypad = Joypad::new();
+        let keymap = joypad.keymap;
+
         for event in event_pump.poll_iter() {
             match event {
-              Event::Quit { .. }
-              | Event::KeyDown {
-                  keycode: Some(Keycode::Escape),
-                  ..
-              } => std::process::exit(0),
-              _ => { /* do nothing */ }
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => std::process::exit(0),
+
+                Event::KeyDown { keycode, .. } => {
+                    if let Some(key) = keymap.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+                        // joypad.set_button_pressed_status(key, true)
+                    }
+                }
+
+                Event::KeyUp { keycode, .. } => {
+                    if let Some(key) = keymap.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+                        // joypad.set_button_pressed_status(key, false)
+                    }
+                }
+
+                _ => { /* do nothing */ }
             }
-         }
+        }
     });
 
     let mut cpu = CPU::new(bus);
