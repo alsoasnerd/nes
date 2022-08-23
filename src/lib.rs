@@ -1,10 +1,13 @@
-pub mod trace;
-pub mod render;
 pub mod components;
+pub mod render;
+pub mod trace;
+
+use std::collections::HashMap;
 
 use components::bus::BUS;
 use components::cartridge::Rom;
 use components::cpu::CPU;
+use components::joypads::{Joypad, JoypadButton};
 use components::ppu::PPU;
 use render::Frame;
 
@@ -17,7 +20,6 @@ extern crate lazy_static;
 
 #[macro_use]
 extern crate bitflags;
-
 
 pub fn run(game: &str) {
     let sdl_context = sdl2::init().unwrap();
@@ -43,23 +45,46 @@ pub fn run(game: &str) {
 
     let mut frame = Frame::new();
 
-    let bus = BUS::new(rom, move |ppu: &PPU| {
+    let mut keymap = HashMap::new();
+    keymap.insert(Keycode::W, JoypadButton::UP);
+    keymap.insert(Keycode::A, JoypadButton::LEFT);
+    keymap.insert(Keycode::S, JoypadButton::DOWN);
+    keymap.insert(Keycode::D, JoypadButton::RIGHT);
+    keymap.insert(Keycode::Space, JoypadButton::BUTTON_A);
+    keymap.insert(Keycode::E, JoypadButton::BUTTON_B);
+    keymap.insert(Keycode::Return, JoypadButton::START);
+    keymap.insert(Keycode::Tab, JoypadButton::SELECT);
+
+    let bus = BUS::new(rom, move |ppu: &PPU, joypad: &mut Joypad| {
         render::render(ppu, &mut frame);
         texture.update(None, &frame.data, 256 * 3).unwrap();
 
         canvas.copy(&texture, None, None).unwrap();
-
         canvas.present();
+
         for event in event_pump.poll_iter() {
             match event {
-              Event::Quit { .. }
-              | Event::KeyDown {
-                  keycode: Some(Keycode::Escape),
-                  ..
-              } => std::process::exit(0),
-              _ => { /* do nothing */ }
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => std::process::exit(0),
+
+                Event::KeyDown { keycode, .. } => {
+                    if let Some(key) = keymap.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+                        joypad.set_button_pressed_status(*key, true)
+                    }
+                }
+
+                Event::KeyUp { keycode, .. } => {
+                    if let Some(key) = keymap.get(&keycode.unwrap_or(Keycode::Ampersand)) {
+                        joypad.set_button_pressed_status(*key, false)
+                    }
+                }
+
+                _ => { /* do nothing */ }
             }
-         }
+        }
     });
 
     let mut cpu = CPU::new(bus);
