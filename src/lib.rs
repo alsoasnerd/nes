@@ -2,10 +2,12 @@ pub mod components;
 pub mod render;
 pub mod trace;
 
+use std::collections::HashMap;
+
 use components::bus::BUS;
 use components::cartridge::Rom;
 use components::cpu::CPU;
-use components::joypads::Joypad;
+use components::joypads::{Joypad, JoypadButton};
 use components::ppu::PPU;
 use render::Frame;
 
@@ -43,15 +45,22 @@ pub fn run(game: &str) {
 
     let mut frame = Frame::new();
 
-    let bus = BUS::new(rom, move |ppu: &PPU| {
+    let mut keymap = HashMap::new();
+    keymap.insert(Keycode::W, JoypadButton::UP);
+    keymap.insert(Keycode::A, JoypadButton::LEFT);
+    keymap.insert(Keycode::S, JoypadButton::DOWN);
+    keymap.insert(Keycode::D, JoypadButton::RIGHT);
+    keymap.insert(Keycode::Space, JoypadButton::BUTTON_A);
+    keymap.insert(Keycode::E, JoypadButton::BUTTON_B);
+    keymap.insert(Keycode::Return, JoypadButton::START);
+    keymap.insert(Keycode::Tab, JoypadButton::SELECT);
+
+    let bus = BUS::new(rom, move |ppu: &PPU, joypad: &mut Joypad| {
         render::render(ppu, &mut frame);
         texture.update(None, &frame.data, 256 * 3).unwrap();
 
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();
-
-        let joypad = Joypad::new();
-        let keymap = joypad.keymap;
 
         for event in event_pump.poll_iter() {
             match event {
@@ -63,13 +72,13 @@ pub fn run(game: &str) {
 
                 Event::KeyDown { keycode, .. } => {
                     if let Some(key) = keymap.get(&keycode.unwrap_or(Keycode::Ampersand)) {
-                        // joypad.set_button_pressed_status(key, true)
+                        joypad.set_button_pressed_status(*key, true)
                     }
                 }
 
                 Event::KeyUp { keycode, .. } => {
                     if let Some(key) = keymap.get(&keycode.unwrap_or(Keycode::Ampersand)) {
-                        // joypad.set_button_pressed_status(key, false)
+                        joypad.set_button_pressed_status(*key, false)
                     }
                 }
 
