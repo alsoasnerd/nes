@@ -134,11 +134,12 @@ mod test {
     use super::*;
     use crate::components::bus::BUS;
     use crate::components::cartridge::test::test_rom;
+    use crate::components::joypads::Joypad;
     use crate::components::ppu::PPU;
 
     #[test]
     fn test_format_trace() {
-        let mut bus = BUS::new(test_rom(), |_ppu: &PPU| {});
+        let mut bus = BUS::new(test_rom(), |_ppu: &PPU, _joypad: &mut Joypad| {});
         bus.memory_write(100, 0xa2);
         bus.memory_write(101, 0x01);
         bus.memory_write(102, 0xca);
@@ -170,7 +171,7 @@ mod test {
 
     #[test]
     fn test_format_memory_access() {
-        let mut bus = BUS::new(test_rom(), |_ppu: &PPU| {});
+        let mut bus = BUS::new(test_rom(), |_ppu: &PPU, _joypad: &mut Joypad| {});
         // ORA ($33), Y
         bus.memory_write(100, 0x11);
         bus.memory_write(101, 0x33);

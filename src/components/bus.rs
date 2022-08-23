@@ -1,4 +1,5 @@
 use super::cartridge::Rom;
+use super::joypads::Joypad;
 use super::ppu::PPU;
 
 //  _______________ $10000  _______________
@@ -38,14 +39,14 @@ pub struct BUS<'call> {
     ppu: PPU,
 
     cycles: usize,
-    gameloop_callback: Box<dyn FnMut(&PPU) + 'call>,
-
+    gameloop_callback: Box<dyn FnMut(&PPU, &mut Joypad) + 'call>,
+    joypad1: Joypad
 }
 
 impl<'a> BUS<'a> {
     pub fn new<'call, F>(rom: Rom, gameloop_callback: F) -> BUS<'call>
     where
-        F: FnMut(&PPU) + 'call,
+        F: FnMut(&PPU, &mut Joypad) + 'call,
     {
         let ppu = PPU::new(rom.chr_rom, rom.screen_mirroring);
 
@@ -55,6 +56,7 @@ impl<'a> BUS<'a> {
             ppu: ppu,
             cycles: 0,
             gameloop_callback: Box::from(gameloop_callback),
+            joypad1: Joypad::new()
         }
     }
 
@@ -78,8 +80,7 @@ impl<'a> BUS<'a> {
             }
 
             0x4016 => {
-                // ignore joypad 1;
-                0
+                self.joypad1.read()
             }
 
             0x4017 => {
@@ -135,7 +136,7 @@ impl<'a> BUS<'a> {
             }
 
             0x4016 => {
-                // ignore joypad 1;
+                self.joypad1.write(data)
             }
 
             0x4017 => {
@@ -197,7 +198,7 @@ impl<'a> BUS<'a> {
         self.cycles += cycles as usize;
         let new_frame = self.ppu.tick(cycles * 3);
         if new_frame {
-            (self.gameloop_callback)(&self.ppu);
+            (self.gameloop_callback)(&self.ppu, &mut self.joypad1);
         }
     }
 
@@ -214,7 +215,7 @@ mod test {
 
     #[test]
     fn test_memory_read_write_to_ram() {
-        let mut bus = BUS::new(test::test_rom(), |_ppu: &PPU| {});
+        let mut bus = BUS::new(test::test_rom(), |_ppu: &PPU, _joypad: &mut Joypad| {});
         bus.memory_write(0x01, 0x55);
         assert_eq!(bus.memory_read(0x01), 0x55);
     }
