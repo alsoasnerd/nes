@@ -27,8 +27,9 @@ impl AddressRegister {
             self.low = data;
         }
 
-        if self.get() > 0x3fff { //mirror down addr above 0x3fff
-            self.set(self.get() & 0b11111111111111); 
+        if self.get() > 0x3fff {
+            //mirror down addr above 0x3fff
+            self.set(self.get() & 0b11111111111111);
         }
 
         self.high_pointer = !self.high_pointer;
@@ -320,7 +321,6 @@ impl StatusRegister {
     }
 }
 
-
 pub struct PPU {
     pub chr_rom: Vec<u8>,
     pub mirroring: Mirroring,
@@ -389,7 +389,8 @@ impl PPU {
     }
 
     fn increment_vram_address(&mut self) {
-        self.address.increment(self.control.vram_address_increment());
+        self.address
+            .increment(self.control.vram_address_increment());
     }
 
     pub fn tick(&mut self, cycles: u8) -> bool {

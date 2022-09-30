@@ -40,7 +40,7 @@ pub struct BUS<'call> {
 
     cycles: usize,
     gameloop_callback: Box<dyn FnMut(&PPU, &mut Joypad) + 'call>,
-    joypad1: Joypad
+    joypad1: Joypad,
 }
 
 impl<'a> BUS<'a> {
@@ -56,7 +56,7 @@ impl<'a> BUS<'a> {
             ppu: ppu,
             cycles: 0,
             gameloop_callback: Box::from(gameloop_callback),
-            joypad1: Joypad::new()
+            joypad1: Joypad::new(),
         }
     }
 
@@ -79,9 +79,7 @@ impl<'a> BUS<'a> {
                 0
             }
 
-            0x4016 => {
-                self.joypad1.read()
-            }
+            0x4016 => self.joypad1.read(),
 
             0x4017 => {
                 // ignore joypad 2
@@ -135,9 +133,7 @@ impl<'a> BUS<'a> {
                 //ignore APU
             }
 
-            0x4016 => {
-                self.joypad1.write(data)
-            }
+            0x4016 => self.joypad1.write(data),
 
             0x4017 => {
                 // ignore joypad 2
@@ -205,7 +201,6 @@ impl<'a> BUS<'a> {
     pub fn poll_nmi_status(&mut self) -> Option<u8> {
         self.ppu.poll_nmi_interrupt()
     }
-
 }
 
 #[cfg(test)]
