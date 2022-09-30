@@ -2,17 +2,17 @@ pub mod bus;
 pub mod cartridge;
 pub mod cpu;
 pub mod opcodes;
-pub mod trace;
 pub mod ppu;
 pub mod render;
+pub mod trace;
 
 use bus::Bus;
 use cartridge::Rom;
 use cpu::Mem;
 use cpu::CPU;
-use trace::trace;
 use render::frame::Frame;
 use render::palette;
+use trace::trace;
 // use rand::Rng;
 
 use sdl2::event::Event;
@@ -28,12 +28,12 @@ extern crate lazy_static;
 #[macro_use]
 extern crate bitflags;
 
-fn show_tile(chr_rom: &Vec<u8>, bank: usize, tile_n: usize) ->Frame {
+fn show_tile(chr_rom: &Vec<u8>, bank: usize, tile_n: usize) -> Frame {
     assert!(bank <= 1);
 
     let mut frame = Frame::new();
     let bank = (bank * 0x1000) as usize;
-    
+
     let tile = &chr_rom[(bank + tile_n * 16)..=(bank + tile_n * 16 + 15)];
 
     for y in 0..=7 {
@@ -58,8 +58,7 @@ fn show_tile(chr_rom: &Vec<u8>, bank: usize, tile_n: usize) ->Frame {
     frame
 }
 
-
-fn show_tile_bank(chr_rom: &Vec<u8>, bank: usize) ->Frame {
+fn show_tile_bank(chr_rom: &Vec<u8>, bank: usize) -> Frame {
     assert!(bank <= 1);
 
     let mut frame = Frame::new();
@@ -98,7 +97,6 @@ fn show_tile_bank(chr_rom: &Vec<u8>, bank: usize) ->Frame {
     frame
 }
 
-
 fn main() {
     // init sdl2
     let sdl_context = sdl2::init().unwrap();
@@ -131,13 +129,13 @@ fn main() {
     loop {
         for event in event_pump.poll_iter() {
             match event {
-              Event::Quit { .. }
-              | Event::KeyDown {
-                  keycode: Some(Keycode::Escape),
-                  ..
-              } => std::process::exit(0),
-              _ => { /* do nothing */ }
+                Event::Quit { .. }
+                | Event::KeyDown {
+                    keycode: Some(Keycode::Escape),
+                    ..
+                } => std::process::exit(0),
+                _ => { /* do nothing */ }
             }
-         }
+        }
     }
 }

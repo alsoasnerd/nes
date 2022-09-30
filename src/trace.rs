@@ -33,7 +33,9 @@ pub fn trace(cpu: &mut CPU) -> String {
 
             match ops.mode {
                 AddressingMode::Immediate => format!("#${:02x}", address),
-                AddressingMode::ZeroPage => format!("${:02x} = {:02x}", memory_address, stored_value),
+                AddressingMode::ZeroPage => {
+                    format!("${:02x} = {:02x}", memory_address, stored_value)
+                }
                 AddressingMode::ZeroPageX => format!(
                     "${:02x},X @ {:02x} = {:02x}",
                     address, memory_address, stored_value
@@ -95,7 +97,9 @@ pub fn trace(cpu: &mut CPU) -> String {
                         format!("${:04x}", address)
                     }
                 }
-                AddressingMode::Absolute => format!("${:04x} = {:02x}", memory_address, stored_value),
+                AddressingMode::Absolute => {
+                    format!("${:04x} = {:02x}", memory_address, stored_value)
+                }
                 AddressingMode::AbsoluteX => format!(
                     "${:04x},X @ {:04x} = {:02x}",
                     address, memory_address, stored_value

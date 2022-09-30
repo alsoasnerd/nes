@@ -15,6 +15,8 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::PixelFormatEnum;
 
+use fps_clock::FpsClock;
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -55,8 +57,11 @@ pub fn run(game: &str) {
     keymap.insert(Keycode::Return, JoypadButton::START);
     keymap.insert(Keycode::Tab, JoypadButton::SELECT);
 
+    let mut fps = FpsClock::new(60);
     let bus = BUS::new(rom, move |ppu: &PPU, joypad: &mut Joypad| {
+
         render::render(ppu, &mut frame);
+
         texture.update(None, &frame.data, 256 * 3).unwrap();
 
         canvas.copy(&texture, None, None).unwrap();
@@ -85,6 +90,7 @@ pub fn run(game: &str) {
                 _ => { /* do nothing */ }
             }
         }
+        fps.tick();
     });
 
     let mut cpu = CPU::new(bus);

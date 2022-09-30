@@ -17,8 +17,6 @@ pub struct Joypad {
     button_status: JoypadButton,
 }
 
-
-
 impl Joypad {
     pub fn new() -> Self {
         Joypad {
