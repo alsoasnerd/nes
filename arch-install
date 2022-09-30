@@ -1,0 +1,4 @@
+!#/bin/sh
+
+yay -S sdl2
+cargo build
