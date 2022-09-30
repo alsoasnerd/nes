@@ -32,7 +32,8 @@ chmod +x ./arch-install
 # Running
 
 ```sh
-cargo run
+chmod +x ./start
+./start
 ```
 
 ---
