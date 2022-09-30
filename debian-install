@@ -1,4 +1,2 @@
-!#/bin/sh
-
 sudo apt install libsdl2-dev
 cargo build
