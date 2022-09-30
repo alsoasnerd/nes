@@ -1,0 +1,4 @@
+!#/bin/sh
+
+sudo pacman -S sdl2
+cargo build
